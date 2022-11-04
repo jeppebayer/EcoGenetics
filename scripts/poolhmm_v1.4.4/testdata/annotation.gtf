@@ -1,0 +1,5 @@
+2L	FlyBase	CDS	10	17	.	+	0	gene_id "001"; transcript_id "001.1";
+2L	FlyBase	exon	10	17	.	+	.	gene_id "001"; transcript_id "001.1";
+2L	FlyBase	exon	15	20	.	+	.	gene_id "001"; transcript_id "001.1";
+2L	FlyBase	exon	25	30	.	+	.	gene_id "001"; transcript_id "001.1";
+2L	FlyBase	intron	21	24	.	+	.	gene_id "001"; transcript_id "001.1";

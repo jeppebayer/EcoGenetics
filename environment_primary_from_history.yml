@@ -1,0 +1,23 @@
+name: ecogen_primary
+channels:
+  - genomedk
+  - gwforg
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - perl
+  - bcftools
+  - vcftools
+  - snpeff
+  - gerp
+  - bwa
+  - git
+  - numpy
+  - samtools
+  - gwf
+  - igv
+  - pandas
+  - polydfe
+  - adapterremoval
+prefix: /home/jepe/miniconda3/envs/ecogen_primary
