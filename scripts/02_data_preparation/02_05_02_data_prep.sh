@@ -19,7 +19,7 @@ sample=$4
 
 # Creates flagstat file for alignment 
 samtools flagstat -@ 7 \
-markdup.bam \
-> markdup.flagstat
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.flagstat
 
 exit 0

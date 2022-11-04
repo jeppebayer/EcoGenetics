@@ -19,7 +19,7 @@ sample=$4
 
 # Creates idxstats file for alignment
 samtools idxstats -@ 7 \
-filtered.bam \
-> filtered.idxstats
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.idxstats
 
 exit 0

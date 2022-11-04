@@ -19,12 +19,12 @@ sample=$4
 
 # Creates bai index for alignment
 samtools index -@ 7 -b \
-.markdup.bam \
-> markdup.bam.bai ; \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam.bai ; \
 
 # Creates idxstats file for alignment
 samtools idxstats -@ 7 \
-markdup.bam \
-> markdup.idxstats
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.idxstats
 
 exit 0

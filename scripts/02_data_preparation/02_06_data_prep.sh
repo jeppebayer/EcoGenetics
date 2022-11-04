@@ -19,13 +19,13 @@ sample=$4
 
 # Removes duplicates and unmapped reads and keeps properly aligned reads with a MapQ >= 20
 samtools view -b -@ 7 \
--F 0x404 -f 0x2 -q 20 \
--o filtered.bam \
-markdup.bam && \
+-F 3844 -q 20 \
+-o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam && \
 
 # Creates bai index for filtered alignment
 samtools index -@ 7 -b \
-filtered.bam \
-> filtered.bam.bai
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam.bai
 
 exit 0

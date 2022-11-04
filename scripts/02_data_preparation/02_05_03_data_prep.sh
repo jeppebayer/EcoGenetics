@@ -19,7 +19,7 @@ sample=$4
 
 # Creates coverage file for alignment
 samtools coverage \
--o markdup.coverage \
-markdup.bam
+-o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.coverage \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
 
 exit 0

@@ -19,22 +19,20 @@ sample=$4
 
 # Concatenating collapsed single-end files
 cat \
-"$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed \
-"$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed.truncated \
-> "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_all_collapsed
-
-cat trimmed_collapsed trimmed_collapsed_truncated > all_collapsed
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed.truncated \
+> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_all_collapsed
 
 # Align sample to reference genome
 bwa mem -t 8 \
 "$RG" \
-"$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_all_collapsed \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_all_collapsed \
 | \
 
 # Sort with regards to QNAME and convert to bam format
 samtools sort -@ 7 -n -O BAM \
 -T "$WD"/temp/  \
--o "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam \
+-o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam \
 -
 
 exit 0

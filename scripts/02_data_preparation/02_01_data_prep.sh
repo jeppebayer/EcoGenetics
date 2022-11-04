@@ -30,7 +30,7 @@ for R2 in "$sample"/*.fq.gz ; do
         --adapter2 AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG \
         --minquality 25 \
         --minlength 20 \
-        --basename "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed \
+        --basename "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed \
         --trimns \
         --trimqualities \
         --collapse

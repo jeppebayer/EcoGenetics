@@ -19,7 +19,7 @@ sample=$4
 
 # Creates flagstat file for alignment 
 samtools flagstat -@ 7 \
-filtered.bam \
-> filtered.flagstat
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.flagstat
 
 exit 0

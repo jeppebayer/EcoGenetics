@@ -58,7 +58,11 @@ for sample in "$SD"/*; do
                 
                 # Creates sample directory in species directory if none exist
                 [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"
-
+                
+                # Creates pre- and post-filtering directory in sample directory if none exist
+                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/pre_filter_stats
+                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/post_filter_stats
+                
                 # AdapterRemoval
                 jid1=$(sbatch --parsable $scripts/02_01_data_prep.sh $RG $SD $WD "$sample")
 

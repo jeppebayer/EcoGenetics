@@ -19,19 +19,19 @@ sample=$4
 
 # Add fixmate tag to alignment. Can only be done on name sorted alignment
 samtools fixmate -@ 7 -m -O BAM \
-complete_sample_aligned.bam \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
 - | \
 
 # Position sort alignment and pipe output
 samtools sort -@ 7 -O BAM \
--T path/to/temp_folder/ \
+-T "$WD"/temp/ \
 - | \
 
 # Mark duplicates and save output as .coordinatesort.bam. Also outputs some realted statistics
 samtools markdup -@ 7 -s \
--f markdup.markdupstats \
--T path/to/temp_folder/ \
+-f "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.markdupstats \
+-T "$WD"/temp/ \
 - \
-markdup.bam
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
 
 exit 0
