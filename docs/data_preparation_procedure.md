@@ -11,6 +11,7 @@ Needed software packages:
 
 ## Step 0: Initialization
 
+(Dependency tree slightly outdated)
 ![dependency_tree](../resources/dependency_chart_data_preparation.png)
 
 ### Script 00
@@ -37,6 +38,8 @@ Needed software packages:
 # ----------------- Description ------------------------------------------
 
 # Script for initializing data preparation procedure for sequence data >70MB
+# Tested and working using people/Jeppe_Bayer/environment_primary_from_history.yml
+
 
 # ----------------- Configuration ----------------------------------------
 
@@ -203,7 +206,7 @@ sample=$4
 
 # Align sample to reference genome
 bwa mem -t 8 \
-"$RG" \
+"${RG%.*}" \
 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated \
 | \
@@ -247,7 +250,7 @@ cat \
 
 # Align sample to reference genome
 bwa mem -t 8 \
-"$RG" \
+"${RG%.*}" \
 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_all_collapsed \
 | \
 

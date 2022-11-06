@@ -19,7 +19,7 @@ sample=$4
 
 # Align sample to reference genome
 bwa mem -t 8 \
-"$RG" \
+"${RG%.*}" \
 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated \
 | \

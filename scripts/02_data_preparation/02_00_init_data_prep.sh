@@ -19,6 +19,7 @@
 # ----------------- Description ------------------------------------------
 
 # Script for initializing data preparation procedure for sequence data >70MB
+# Tested and working using people/Jeppe_Bayer/environment_primary_from_history.yml
 
 # ----------------- Configuration ----------------------------------------
 
