@@ -261,6 +261,14 @@ Standard directory construction for scripts:
   - <procedure_number>_<procedure_name> [directory]
     - <procedure_number>_<script_number>_<procedure_name> (procedure name only on first script) [file]
 
+### **07/11-2022**
+
+When current running version of 02_data_preparation is done running:
+
+- Change script directory to be built in and thus not need to be supplied.
+- Change folder for final .bam file to be the population_genetics folder for the sample - same for the associated .bai file.
+- Package all scripts relating to 02_data_preparation, with the exception of the init script, to be in a single folder called "core" or "modules" or something of the sort
+
 ---
 
 ## **JOBS**

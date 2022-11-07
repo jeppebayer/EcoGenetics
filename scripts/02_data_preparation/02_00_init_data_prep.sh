@@ -18,13 +18,10 @@
 
 # ----------------- Description ------------------------------------------
 
-# Script for initializing data preparation procedure for sequence data >70MB
+# Script for initializing data preparation procedure for sequence data
 # Tested and working using EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
 
 # ----------------- Configuration ----------------------------------------
-
-# Directory containing scripts, abosolute path (Do NOT end with '/')
-scripts="/home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/02_data_preparation"
 
 # Species specific reference genome, abosolute path (reference genome in FASTA format)
 RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
@@ -35,11 +32,14 @@ SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cinc
 # Working directory, abosolute path (Do NOT end with '/')
 WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
 
+# Algorithm to use during alignment: mem (>70MB, contemporary samples) or aln (<70MB, historic samples)
+algo="mem"
+
 # ----------------- Script Queue -----------------------------------------
 
 # Gets path to script location
-path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
-path=$(dirname "$path")
+script_path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+script_path=$(dirname "$script_path")
 
 # Creates temp directory in working directory if none exist
 [[ -d $WD/temp ]] || mkdir -m 764 $WD/temp
@@ -69,34 +69,34 @@ for sample in "$SD"/*; do
                 [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/post_filter_stats
                 
                 # AdapterRemoval
-                jid1=$(sbatch --parsable "$scripts"/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
                 # Aligning to reference
-                jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$scripts"/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$scripts"/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
 
                 # Merging of alignment files
-                jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$scripts"/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
                 # Marking duplicates
-                jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$scripts"/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
                 # Statistics pre-filtering
-                jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
 
                 # Removal of duplicates, unmapped reads and low quality mappings
-                jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$scripts"/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
                 # Statistics post-filtering
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
             else
 

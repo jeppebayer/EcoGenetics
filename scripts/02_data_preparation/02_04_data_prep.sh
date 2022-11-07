@@ -34,4 +34,8 @@ samtools markdup -@ 7 -s \
 - \
 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
 
+# File removal
+rm -f \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam
+
 exit 0
