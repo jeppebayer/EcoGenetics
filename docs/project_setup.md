@@ -5,6 +5,7 @@ Collection of beetles, spiders and collembolas
 55 grassland/meadows -> ~20 species -> 50 individuals in pooled seq
 
 Demographic parameters:
+
 - Area
 - Temporal continuity
 - Spacial continuity
@@ -12,6 +13,7 @@ Demographic parameters:
 ![Spatial continuity](../resources/spatial_continuty.png)
 
 Four main research areas:
+
 1. Basic: Diversity, structure, gene-flow
 2. Environmental association studies
 3. Occurence of hard vs. soft sweeps

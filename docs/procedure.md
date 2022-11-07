@@ -6,6 +6,10 @@
 
 [02 Data Preparation](data_preparation_procedure.md)
 
+## Overview
+
+(Needs to be overhauled)
+
 1. Index reference genome using "bwa index"
 2. Align sample sequences to reference genome using "bwa mem"
 3. Convert SAM file created by "bwa mem" to BAM file using "samtools view"
@@ -19,11 +23,3 @@
 8. Check number of remaining reads after filtering
 
 ![Workflow](../resources/workflow02.png)
-
-**GERP** can seemingly be conducted at different scopes. in the related article analysis has been conducted on the mamalian scope with the platypus as the furthest species
-
-Phylogenetic tree used for GERP++ analysis. Tree drawn to scale with respect to estimated neutral branch length. (GERP++ article)
-
-https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1001025#s5
-
-![Phylogeny used with GERP++](../resources/gerp_phylogeny.png)

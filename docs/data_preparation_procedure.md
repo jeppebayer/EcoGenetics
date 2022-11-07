@@ -9,6 +9,9 @@ Needed software packages:
 - samtools
 - awk
 
+Conda environmnet used:  
+[environmnet_primary_from_history.yml](../environment_primary_from_history.yml)
+
 ## Step 0: Initialization
 
 (Dependency tree slightly outdated)
