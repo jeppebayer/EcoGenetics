@@ -17,15 +17,18 @@ Needed software packages:
 #SBATCH --cpus-per-task 8
 #SBATCH --time 2:00:00
 
+# Species specific reference genome, abosolute path (reference genome in FASTA format)
+RG=""
+
 # Indexing reference genome for aligning
 bwa index \
--p prefix/refence_genome \
-refence_genome.fna ; \
+-p "${RG%.*}" \
+"$RG" ; \
 
 # Adding fai index to reference
 samtools faidx \
--o reference_genome.fna.fai \
-reference_genome.fna
+-o "$RG".fai \
+"$RG"
 
 exit 0
 ```

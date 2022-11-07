@@ -83,10 +83,13 @@ WD="people/Jeppe_Bayer/steps"
 
 # done
 
+path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+path=$(dirname "$path")
+
 # AdapterRemoval
-jid1=$(sbatch --parsable /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test2.sh)
+jid1=$(sbatch --parsable "$path"/test2.sh)
 
 # Aligning to reference
-sbatch --parsable --dependency=aftany:"$jid1" /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh
+# sbatch --parsable --dependency=aftany:"$jid1" /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh
 
 exit 0

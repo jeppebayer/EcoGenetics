@@ -7,6 +7,8 @@
 
 RG=$1
 
-srun echo "$RG"
+path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+
+srun echo "$path"
 
 exit 0

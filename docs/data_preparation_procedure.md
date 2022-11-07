@@ -38,7 +38,7 @@ Needed software packages:
 # ----------------- Description ------------------------------------------
 
 # Script for initializing data preparation procedure for sequence data >70MB
-# Tested and working using people/Jeppe_Bayer/environment_primary_from_history.yml
+# Tested and working using EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
 
 
 # ----------------- Configuration ----------------------------------------
@@ -46,7 +46,7 @@ Needed software packages:
 # Directory containing scripts, abosolute path (Do NOT end with '/')
 scripts="/home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/02_data_preparation"
 
-# Species specific reference genome, abosolute path (in FASTA format)
+# Species specific reference genome, abosolute path (reference genome in FASTA format)
 RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
 # Species specific sample directory, abosolute path (Do NOT end with '/')
