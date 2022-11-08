@@ -39,11 +39,14 @@ EOF
 
 RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
-for file in "$(dirname "$RG")"/*.gff; do
-    gff=$file
-done
+# for file in "$(dirname "$RG")"/*.gff; do
+#     gff=$file
+# done
 
-echo "$gff"
+# echo "$gff"
+sample="bab_bab_2020"
+year="${sample: -4}"
+[ "$((${sample: -4}))" -gt 2000 ] && echo "Newer than 2000"
 
 exit 1
 

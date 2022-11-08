@@ -53,15 +53,15 @@ EOF
 
 # Species specific reference genome, abosolute path (reference genome in FASTA format)
 RG=
-# "/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
+# RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
 # Species specific sample directory, abosolute path (Do NOT end with '/')
 SD=
-# "/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
+# SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
 
 # Working directory, abosolute path (Do NOT end with '/')
 WD=
-# "/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
+# WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
 
 # Algorithm to use during alignment: mem (>70MB, contemporary samples) or aln (<70MB, historic samples)
 algo="mem"
@@ -191,55 +191,172 @@ for sample in "$SD"/*; do
     # Checks if sample folder is empty
     if [ "$(ls -A "$sample")" ]; then
 
-        for file in "$sample"/*.bam; do
+        # Checks if currently working with museomics samples
+        if [[ "$SD" == *"museomics"* ]]; then
 
-            # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
-            if [ ! -e "$file" ]; then
-                
-                # Creates sample directory in species directory if none exist
-                [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
-                
-                # Creates pre- and post-filtering directory in sample directory if none exist
-                [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
-                [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
-                
-                # AdapterRemoval
-                jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+            # Checks if sample directory is pre-2000 (historic) or post-2000 (modern)
+            if [ "$((${sample: -4}))" -gt 2000 ]; then
+                algo="mem"
 
-                # Aligning to reference
-                jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                for file in "$sample"/*.bam; do
 
-                # Merging of alignment files
-                jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                    # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
+                    if [ ! -e "$file" ]; then
+                        
+                        # Creates sample directory in species directory if none exist
+                        [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
+                        
+                        # Creates pre- and post-filtering directory in sample directory if none exist
+                        [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
+                        [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
+                        
+                        # AdapterRemoval
+                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
-                # Marking duplicates
-                jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Aligning to reference
+                        jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                        jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
 
-                # Statistics pre-filtering
-                jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Merging of alignment files
+                        jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Marking duplicates
+                        jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Statistics pre-filtering
+                        jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
 
-                # Removal of duplicates, unmapped reads and low quality mappings
-                jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Removal of duplicates, unmapped reads and low quality mappings
+                        jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
-                # Statistics post-filtering
-                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        # Statistics post-filtering
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        # sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
+                    else
+
+                        echo "$sample already contains a .bam file, $file, and is skipped"
+                    fi
+
+                done
+            
             else
 
-                echo "$sample already contains a .bam file, $file, and is skipped"
-            fi
+                algo="aln"
+                
+                for file in "$sample"/*.bam; do
 
-        done
+                    # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
+                    if [ ! -e "$file" ]; then
+                        
+                        # Creates sample directory in species directory if none exist
+                        [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
+                        
+                        # Creates pre- and post-filtering directory in sample directory if none exist
+                        [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
+                        [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
+                        
+                        # AdapterRemoval
+                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Aligning to reference
+                        jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                        jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                        # Merging of alignment files
+                        jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Marking duplicates
+                        jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Statistics pre-filtering
+                        jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+
+                        # Removal of duplicates, unmapped reads and low quality mappings
+                        jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Statistics post-filtering
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        # sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+
+                    else
+
+                        echo "$sample already contains a .bam file, $file, and is skipped"
+                    fi
+
+                done
+
+            fi
+        
+        else
+
+            for file in "$sample"/*.bam; do
+
+                # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
+                if [ ! -e "$file" ]; then
+                        
+                    # Creates sample directory in species directory if none exist
+                    [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
+                
+                    # Creates pre- and post-filtering directory in sample directory if none exist
+                    [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
+                    [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
+                
+                    # AdapterRemoval
+                    jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                    # Aligning to reference
+                    jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                    jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                    # Merging of alignment files
+                    jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                    # Marking duplicates
+                    jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                    # Statistics pre-filtering
+                    jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                    jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                    jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                    jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+
+                    # Removal of duplicates, unmapped reads and low quality mappings
+                    jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                    # Statistics post-filtering
+                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                    # sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+
+                else
+
+                    echo "$sample already contains a .bam file, $file, and is skipped"
+                fi
+
+            done
+
+        fi
 
     else
 
