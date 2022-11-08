@@ -21,34 +21,169 @@
 # Script for initializing data preparation procedure for sequence data
 # Tested and working using EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
 
+# ----------------- Usage ------------------------------------------------
+
+usage()
+{
+cat << EOF
+
+Usage: 02_00_init_data_prep.sh [-r|--reference] FILE [-s|--species] DIRECTORY [-d|--directory] DIRECTORY [-a|--algorithm] ALGORITHM [-h|--help]
+
+This script is used for initializing the standardized data preparation procedure for sequence data.
+Intended to be used in conjunction with 'sbatch', however it also be used in conjunction with 'srun' or simply on the frontend as its resources demands are fairly low.
+
+PARAMETERS:
+    -r | --reference    Species specific reference genome, abosolute path (reference genome in FASTA format)
+    -s | --species      Species specific sample directory, abosolute path (Do NOT end with '/')
+    -d | --directory    Working directory, abosolute path (Do NOT end with '/')
+
+OPTIONS:
+    -a | --algorithm    Choice of algorithm to be used during alignment. mem (>70MB, contemporary samples)[default] or aln (<70MB, historic samples)
+    -h | --help         Show this message
+
+Parameters can also be set directly in the script. 
+If you decide to do so, change the variables under CONFIGURATION.
+
+Tested and working using EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
+
+EOF
+}
+
 # ----------------- Configuration ----------------------------------------
 
 # Species specific reference genome, abosolute path (reference genome in FASTA format)
-RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
+RG=
+# "/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
 # Species specific sample directory, abosolute path (Do NOT end with '/')
-SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
+SD=
+# "/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
 
 # Working directory, abosolute path (Do NOT end with '/')
-WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
+WD=
+# "/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
 
 # Algorithm to use during alignment: mem (>70MB, contemporary samples) or aln (<70MB, historic samples)
 algo="mem"
 
+# ----------------- Error messages ---------------------------------------
+
+error_r()
+{
+cat << EOF
+
+ERROR: $OPTARG does not seem to be a .fna file
+
+If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+
+EOF
+}
+
+error_s()
+{
+cat << EOF
+
+ERROR: $OPTARG does not seem to be a directory
+
+If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+
+EOF
+}
+
+error_d()
+{
+cat << EOF
+
+ERROR: $OPTARG does not seem to be a directory
+
+If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+
+EOF
+}
+
+error_a()
+{
+cat << EOF
+
+ERROR: -a must be either 'mem' [default] or 'aln'
+
+If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+
+EOF
+}
+
+# ----------------- Script Flag Processing -------------------------------
+
+while getopts 'r:s:d:a:h' OPTION; do
+    case "$OPTION" in
+        r)
+            if [ -f "$OPTARG" ] && [[ $OPTARG == *.fna ]]; then
+                RG="$OPTARG"
+            else
+                error_r
+                exit 1
+            fi
+            ;;
+        s)
+            if [ -d "$OPTARG" ]; then
+                SD="$OPTARG"
+            else
+                error_s
+                exit 1
+            fi
+            ;;
+        d)
+            if [ -d "$OPTARG" ]; then
+                WD="$OPTARG"
+            else
+                error_d
+                exit 1
+            fi
+            ;;
+        a)
+            if [[ $OPTARG == "mem" ]] || [[ $OPTARG == "aln" ]]; then
+                algo="$OPTARG"
+            else
+                error_a
+                exit 1
+            fi
+            ;;
+        h)
+            usage
+            exit 1
+            ;;
+        ?)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z $RG ]] || [[ -z $SD ]] || [[ -z $WD ]]; then
+    usage
+    exit 1
+fi
+
 # ----------------- Script Queue -----------------------------------------
 
 # Gets path to script location
-script_path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
-script_path=$(dirname "$script_path")
+# If run through sbatch or srun:
+if [ -n "$SLURM_JOB_ID" ]; then
+    script_path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+    script_path=$(dirname "$script_path")
+# If run on the frontend:
+else
+    script_path=$(realpath "$0")
+fi
 
 # Creates temp directory in working directory if none exist
-[[ -d $WD/temp ]] || mkdir -m 764 $WD/temp
+[[ -d "$WD"/temp ]] || mkdir -m 764 "$WD"/temp
 
 # Creates 01_data_preparation directory in working directory if none exist
-[[ -d $WD/01_data_preparation ]] || mkdir -m 764 $WD/01_data_preparation
+[[ -d "$WD"/01_data_preparation ]] || mkdir -m 764 "$WD"/01_data_preparation
 
 # Creates species directory in 01_data_preparation directory if none exist
-[[ -d $WD/01_data_preparation/$(basename $SD) ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"
+[[ -d "$WD"/01_data_preparation/$(basename "$SD") ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"
 
 # Loops through all sample folders within species specific sample directory
 for sample in "$SD"/*; do
@@ -62,11 +197,11 @@ for sample in "$SD"/*; do
             if [ ! -e "$file" ]; then
                 
                 # Creates sample directory in species directory if none exist
-                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"
+                [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
                 
                 # Creates pre- and post-filtering directory in sample directory if none exist
-                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/pre_filter_stats
-                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/post_filter_stats
+                [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
+                [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
                 
                 # AdapterRemoval
                 jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
@@ -97,17 +232,18 @@ for sample in "$SD"/*; do
                 sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                 sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                 sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
             else
 
-                srun echo "$sample already contains a .bam file, $file, and is skipped"
+                echo "$sample already contains a .bam file, $file, and is skipped"
             fi
 
         done
 
     else
 
-        srun echo "$sample is an empty directory and is skipped"
+        echo "$sample is an empty directory and is skipped"
     fi
 
 done

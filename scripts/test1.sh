@@ -5,23 +5,6 @@
 #SBATCH --cpus-per-task 1
 #SBATCH --time 00:30:00
 
-# ------------------------------------------------------------------------
-# Created by Jeppe Bayer
-# 
-# Master's student at Aarhus University
-# Department of Genetics, Ecology and Evolution
-# Centre for EcoGenetics
-# 
-# For troubleshooting or questions:
-# Email: jeppe.bayer@bio.au.dk
-# ------------------------------------------------------------------------
-
-# ----------------- Description ------------------------------------------
-
-# Script for initializing data preparation procedure for sequence data >70MB
-
-# ----------------- Configuration ----------------------------------------
-
 # Directory containing scripts (Do NOT end with '/')
 scripts="people/Jeppe_Bayer/scripts"
 
@@ -34,62 +17,43 @@ SD="BACKUP/population_genetics/collembola/Orchesella_cincta"
 # Working directory (Do NOT end with '/')
 WD="people/Jeppe_Bayer/steps"
 
-# ----------------- Script Queue -----------------------------------------
+usage()
+{
+cat << EOF
 
-# # Creates temp directory in working directory if none exist
-# [[ -d $WD/temp ]] || mkdir -m 764 $WD/temp
+Usage: 02_00_init_data_prep.sh [-r|--reference] <reference_genome> [-s|--species] <species_directory> [-d|--directory] <working_directory> [-a|--algorithm] <algorithm> [-h|--help]
 
-# # Creates 01_data_preparation directory in working directory if none exist
-# [[ -d $WD/01_data_preparation ]] || mkdir -m 764 $WD/01_data_preparation
+This script is used for initializing the standardized data preparation procedure for sequence data
 
-# # Creates species directory in 01_data_preparation directory if none exist
-# [[ -d $WD/01_data_preparation/$(basename $SD) ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"
+PARAMETERS:
+    -r | --reference    Species specific reference genome, abosolute path (reference genome in FASTA format)
+    -s | --species      Species specific sample directory, abosolute path (Do NOT end with '/')
+    -d | --directory    Working directory, abosolute path (Do NOT end with '/')
 
-# # Loops through all sample folders within species specific sample directory
-# for sample in "$SD"/*; do
+OPTIONS:
+    -a | --algorithm    Choice of algorithm to be used during alignment. mem (>70MB, contemporary samples)[default] or aln (<70MB, historic samples)
+    -h | --help         Show this message
 
-#     # Checks if sample folder is empty
-#     if [ "$(ls -A "$sample")" ]; then
+EOF
+}
 
-#         for file in "$sample"/*.bam; do
+RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
-#             # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
-#             if [ ! -e "$file" ]; then
-                
-#                 # Creates sample directory in species directory if none exist
-#                 [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"
-                
-#                 # Creates pre- and post-filtering directory in sample directory if none exist
-#                 [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/pre_filter_stats
-#                 [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/post_filter_stats
-                
-#                 # AdapterRemoval
-#                 jid1=$(sbatch --parsable /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test2.sh)
+for file in "$(dirname "$RG")"/*.gff; do
+    gff=$file
+done
 
-#                 # Aligning to reference
-#                 sbatch --parsable --dependency=aftany:"$jid1" /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh
-                
-#             else
+echo "$gff"
 
-#                 srun echo "$sample already contains a .bam file, $file, and is skipped"
-#             fi
+exit 1
 
-#         done
+# path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+# path=$(dirname "$path")
 
-#     else
-
-#         srun echo "$sample is an empty directory and is skipped"
-#     fi
-
-# done
-
-path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
-path=$(dirname "$path")
-
-# AdapterRemoval
-jid1=$(sbatch --parsable "$path"/test2.sh)
+# # AdapterRemoval
+# jid1=$(sbatch --parsable "$path"/test2.sh)
 
 # Aligning to reference
 # sbatch --parsable --dependency=aftany:"$jid1" /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh
 
-exit 0
+# exit 0

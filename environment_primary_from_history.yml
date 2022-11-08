@@ -20,4 +20,5 @@ dependencies:
   - pandas
   - polydfe
   - adapterremoval
+  - qualimap
 prefix: /home/jepe/miniconda3/envs/ecogen_primary
