@@ -196,6 +196,8 @@ for sample in "$SD"/*; do
 
             # Checks if sample directory is pre-2000 (historic) or post-2000 (modern)
             if [ "$((${sample: -4}))" -gt 2000 ]; then
+
+                # Sample is modern
                 algo="mem"
 
                 for file in "$sample"/*.bam; do
@@ -250,8 +252,9 @@ for sample in "$SD"/*; do
             
             else
 
+                # Sample is historic
                 algo="aln"
-                
+
                 for file in "$sample"/*.bam; do
 
                     # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
