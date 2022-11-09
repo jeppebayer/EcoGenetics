@@ -177,6 +177,7 @@ if [ -n "$SLURM_JOB_ID" ]; then
 # If run on the frontend:
 else
     script_path=$(realpath "$0")
+    script_path=$(dirname "$script_path")
 fi
 
 # Creates working directory if it doesn't exist
@@ -270,6 +271,8 @@ for sample in "$SD"/*; do
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
+                        echo "$sample has been sent to queue"
+
                     else
 
                         echo "$sample already contains a .bam file, $file, and is skipped"
@@ -346,6 +349,8 @@ for sample in "$SD"/*; do
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
+                        echo "$sample has been sent to queue"
+
                     else
 
                         echo "$sample already contains a .bam file, $file, and is skipped"
@@ -416,6 +421,8 @@ for sample in "$SD"/*; do
                     sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                     sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                     sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+
+                    echo "$sample has been sent to queue"
 
                 else
 
