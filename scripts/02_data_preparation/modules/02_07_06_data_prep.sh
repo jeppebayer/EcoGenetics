@@ -17,6 +17,8 @@
 # Sample directory
 # sample=$4
 
+RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
+
 for file in "$(dirname "$RG")"/*.gff; do
     gff=$file
 done

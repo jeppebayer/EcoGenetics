@@ -27,19 +27,25 @@ usage()
 {
 cat << EOF
 
-Usage: 02_00_init_data_prep.sh [-r|--reference] FILE [-s|--species] DIRECTORY [-d|--directory] DIRECTORY [-a|--algorithm] ALGORITHM [-h|--help]
+Usage: 02_00_init_data_prep.sh [-r FILE] [-s DIRECTORY] [-d DIRECTORY] [-a ALGORITHM] [-h]
 
 This script is used for initializing the standardized data preparation procedure for sequence data.
-Intended to be used in conjunction with 'sbatch', however it also be used in conjunction with 'srun' or simply on the frontend as its resources demands are fairly low.
+Intended to be used in conjunction with 'sbatch', however it also be used in conjunction with 'srun' 
+or simply on the frontend as its resource-demands are fairly low.
+
+The 'Mads loop condition': If the specified species sample directory is within the 'museomics' directory, 
+the script will automatically try to detect whether the sample directory is contemporary or historical 
+and automatically apply the corresponding algorithm. This means that if you sample are in the 
+museomics directory you do not need to specify an algorithm.
 
 PARAMETERS:
-    -r | --reference    Species specific reference genome, abosolute path (reference genome in FASTA format)
-    -s | --species      Species specific sample directory, abosolute path (Do NOT end with '/')
-    -d | --directory    Working directory, abosolute path (Do NOT end with '/')
+    -r  FILE            Species specific reference genome, abosolute path (reference genome in FASTA format)
+    -s  DIRECTORY       Species specific sample directory, abosolute path (Do NOT end with '/')
+    -d  DIRECTORY       Working directory, abosolute path (Do NOT end with '/')
 
 OPTIONS:
-    -a | --algorithm    Choice of algorithm to be used during alignment. mem (>70MB, contemporary samples)[default] or aln (<70MB, historic samples)
-    -h | --help         Show this message
+    -a  ALGORITHM       Choice of algorithm to be used during alignment. 'mem' (>70MB, contemporary samples)[default] or 'aln' (<70MB, historic samples)
+    -h                  Show this message
 
 Parameters can also be set directly in the script. 
 If you decide to do so, change the variables under CONFIGURATION.
