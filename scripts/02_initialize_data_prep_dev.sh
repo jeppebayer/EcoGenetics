@@ -192,273 +192,120 @@ fi
 # Creates species directory in 01_data_preparation directory if none exist
 [[ -d "$WD"/01_data_preparation/"$(basename "$SD")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"
 
+# Creates log file
+touch "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
 # Loops through all sample folders within species specific sample directory
 for sample in "$SD"/*; do
 
     # Checks if sample folder is empty
     if [ "$(ls -A "$sample")" ]; then
+        
+        # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed        
+        for file in "$sample"/*.bam; do
+            if [ ! -e "$file" ]; then
+                
+                # Creates sample directory in species directory if none exist
+                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
 
-        # Checks if currently working with museomics samples
-        if [[ "$SD" == *"museomics"* ]]; then
+                # Creates pre- and post-filtering directory in sample directory if none exist
+                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
+                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
 
-            # Checks if sample directory is pre-2000 (historic) or post-2000 (modern) and sets the algrorithm parameter correspondingly
-            if [ "$((${sample: -4}))" -gt 2000 ]; then
+                # Checks if currently working with museomics samples
+                if [[ "$SD" == *"museomics"* ]]; then
 
-                # Sample is modern
-                algo="mem"
+                    # Checks if sample directory is pre-2000 (historic) or post-2000 (modern) and sets the algrorithm parameter correspondingly
+                    if [ "$((${sample: -4}))" -gt 2000 ]; then
 
-                for file in "$sample"/*.bam; do
+                        # Sample is modern
+                        algo="mem"
 
-                    # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
-                    if [ ! -e "$file" ]; then
-                        
-                        # Creates log file
-                        # touch "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/log_"$(basename "$sample")".txt
-
-                        # Creates sample directory in species directory if none exist
-                        [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
-                        
-                        # Creates pre- and post-filtering directory in sample directory if none exist
-                        [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
-                        [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
-                        
                         # Check the number of .fq.gz files in sample directory (assumed to be indicative of whether sample is single- or paired-end)
                         count=$(find "$sample"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
                         if [ "$count" == 1 ]; then
                             
                             # Single-end
-
-                            # AdapterRemoval
-                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                            # Aligning to reference
-                            jid2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-
-                            # Marking duplicates
-                            jid4=$(sbatch --parsable --dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
+                        
                         else
 
                             # Paired-end
 
-                            # AdapterRemoval
-                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                            # Aligning to reference
-                            jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                            jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-
-                            # Merging of alignment files
-                            jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                            # Marking duplicates
-                            jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
                         fi
-                        
-                        # Statistics pre-filtering
-                        jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-
-                        # Removal of duplicates, unmapped reads and low quality mappings
-                        jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                        # Statistics post-filtering
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
                         if [ "$count" == 1 ]; then
-                            echo "$sample has been sent to queue as a single-end modern sample"
+                            echo "$sample has been sent to queue as a single-end modern sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         else
-                            echo "$sample has been sent to queue as a pair-end modern sample"
+                            echo "$sample has been sent to queue as a pair-end modern sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         fi
 
                     else
 
-                        echo "$sample already contains a .bam file, $file, and is skipped"
-                    fi
+                        # Sample is historic
+                        algo="aln"
 
-                done
-            
-            else
-
-                # Sample is historic
-                algo="aln"
-
-                for file in "$sample"/*.bam; do
-
-                    # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
-                    if [ ! -e "$file" ]; then
-                        
-                        # Creates log file
-                        # touch "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/log_"$(basename "$sample")".txt
-
-                        # Creates sample directory in species directory if none exist
-                        [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
-                        
-                        # Creates pre- and post-filtering directory in sample directory if none exist
-                        [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
-                        [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
-                        
                         # Check the number of .fq.gz files in sample directory (assumed to be indicative of whether sample is single- or paired-end)
                         count=$(find "$sample"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
                         if [ "$count" == 1 ]; then
-
+                            
                             # Single-end
-
-                            # AdapterRemoval
-                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                            # Aligning to reference
-                            jid2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-
-                            # Marking duplicates
-                            jid4=$(sbatch --parsable --dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
+                        
                         else
 
                             # Paired-end
 
-                            # AdapterRemoval
-                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                            # Aligning to reference
-                            jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                            jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-
-                            # Merging of alignment files
-                            jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                            # Marking duplicates
-                            jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
                         fi
-
-                        # Statistics pre-filtering
-                        jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-
-                        # Removal of duplicates, unmapped reads and low quality mappings
-                        jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                        # Statistics post-filtering
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
                         if [ "$count" == 1 ]; then
-                            echo "$sample has been sent to queue as a single-end hisotric sample"
+                            echo "$sample has been sent to queue as a single-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         else
-                            echo "$sample has been sent to queue as a pair-end historic sample"
+                            echo "$sample has been sent to queue as a pair-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         fi
 
-                    else
-
-                        echo "$sample already contains a .bam file, $file, and is skipped"
                     fi
 
-                done
+                else
 
-            fi
-        
-        else
-
-            for file in "$sample"/*.bam; do
-
-                # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
-                if [ ! -e "$file" ]; then
-
-                    # Creates log file
-                    # touch "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/log_"$(basename "$sample")".txt
-                    
-                    # Creates sample directory in species directory if none exist
-                    [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
-                
-                    # Creates pre- and post-filtering directory in sample directory if none exist
-                    [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
-                    [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
-                
                     # Check the number of .fq.gz files in sample directory (assumed to be indicative of whether sample is single- or paired-end)
                     count=$(find "$sample"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
                     if [ "$count" == 1 ]; then
 
-                        # AdapterRemoval
-                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                        # Aligning to reference
-                        jid2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-
-                        # Marking duplicates
-                        jid4=$(sbatch --parsable --dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
+                        # Single-end
+                        
                     else
 
-                        # AdapterRemoval
-                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                        # Aligning to reference
-                        jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                        jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-
-                        # Merging of alignment files
-                        jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                        # Marking duplicates
-                        jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Paired-end
 
                     fi
 
-                    # Statistics pre-filtering
-                    jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                    jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                    jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                    jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-
-                    # Removal of duplicates, unmapped reads and low quality mappings
-                    jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                    # Statistics post-filtering
-                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                    
                     if [ "$count" == 1 ]; then
-                            echo "$sample has been sent to queue as a single-end sample"
-                        else
-                            echo "$sample has been sent to queue as a pair-end sample"
-                        fi
 
-                else
+                        echo "$sample has been sent to queue as a single-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
-                    echo "$sample already contains a .bam file, $file, and is skipped"
+                    else
+
+                        echo "$sample has been sent to queue as a pair-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
+                    fi
+
                 fi
 
-            done
+            else
 
-        fi
+                echo "$sample already contains a .bam file, $file, and is skipped" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
+            fi
+
+        done
 
     else
 
-        echo "$sample is an empty directory and is skipped"
+        echo "$sample is an empty directory and is skipped" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
     fi
 
 done
+
+echo "Log file can be found here: $WD/01_data_preparation/$(basename "$SD")/log_$(basename "$SD")_$(date +"%Y-%m-%d").txt"
 
 exit 0
