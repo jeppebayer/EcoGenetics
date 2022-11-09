@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
+#SBATCH --mem-per-cpu 8G
 #SBATCH --cpus-per-task 8
 #SBATCH --time 24:00:00
 
@@ -27,9 +27,5 @@ samtools view -b -@ 7 \
 samtools index -@ 7 -b \
 "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
 > "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam.bai
-
-# File removal
-rm -f \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
 
 exit 0

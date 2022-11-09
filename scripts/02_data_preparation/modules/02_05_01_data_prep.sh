@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
+#SBATCH --mem-per-cpu 8G
 #SBATCH --cpus-per-task 8
 #SBATCH --time 1:00:00
 

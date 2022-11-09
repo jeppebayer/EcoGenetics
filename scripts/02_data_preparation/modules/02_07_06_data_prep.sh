@@ -6,35 +6,41 @@
 #SBATCH --time 20:00:00
 
 # Reference genome
-# RG=$1
+RG=$1
 
 # Species directory
-# SD=$2
+SD=$2
 
 # Working directory
-# WD=$3
+WD=$3
 
 # Sample directory
-# sample=$4
+sample=$4
 
-RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
-
+# First checks whether a .gff file for the reference genome is available
 for file in "$(dirname "$RG")"/*.gff; do
-    gff=$file
+    if [ -e "$file" ]; then
+        
+        # .gff file is available
+        gff=$file
+
+        qualimap bamqc \
+        -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+        -gff "$gff" \
+        -outdir "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/qualimap \
+        -outfile "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_qualimap.pdf \
+        -outformat PDF \
+        --java-mem-size=16G
+        exit 0
+    else
+
+        # .gff file is not available
+        qualimap bamqc \
+        -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+        -outdir "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/qualimap \
+        -outfile "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_qualimap.pdf \
+        -outformat PDF \
+        --java-mem-size=16G
+        exit 0
+    fi
 done
-
-WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
-
-SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
-
-sample="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F"
-
-qualimap bamqc \
--bam "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
--gff "$gff" \
--outdir "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/qualimap/ \
--outfile "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_qualimap.pdf \
--outformat PDF \
---java-mem-size=16G
-
-exit 0

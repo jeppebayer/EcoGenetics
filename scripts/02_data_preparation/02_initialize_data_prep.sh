@@ -3,7 +3,7 @@
 #SBATCH --partition normal
 #SBATCH --mem-per-cpu 2G
 #SBATCH --cpus-per-task 1
-#SBATCH --time 00:30:00
+#SBATCH --time 00:40:00
 
 # ------------------------------------------------------------------------
 # Created by Jeppe Bayer
@@ -27,7 +27,7 @@ usage()
 {
 cat << EOF
 
-Usage: 02_00_init_data_prep.sh [-r FILE] [-s DIRECTORY] [-d DIRECTORY] [-a ALGORITHM] [-h]
+Usage: 02_initialize_data_prep.sh [-r FILE] [-s DIRECTORY] [-d DIRECTORY] [-a ALGORITHM] [-h]
 
 This script is used for initializing the standardized data preparation procedure for sequence data.
 Intended to be used in conjunction with 'sbatch', however it also be used in conjunction with 'srun' 
@@ -35,7 +35,7 @@ or simply on the frontend as its resource-demands are fairly low.
 
 The 'Mads loop condition': If the specified species sample directory is within the 'museomics' directory, 
 the script will automatically try to detect whether the sample directory is contemporary or historical 
-and automatically apply the corresponding algorithm. This means that if you sample are in the 
+and automatically applies the corresponding algorithm. This means that if your samples are in the 
 museomics directory you do not need to specify an algorithm.
 
 PARAMETERS:
@@ -59,17 +59,14 @@ EOF
 
 # Species specific reference genome, abosolute path (reference genome in FASTA format)
 RG=
-# RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
 # Species specific sample directory, abosolute path (Do NOT end with '/')
 SD=
-# SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
 
 # Working directory, abosolute path (Do NOT end with '/')
 WD=
-# WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
 
-# Algorithm to use during alignment: mem (>70MB, contemporary samples) or aln (<70MB, historic samples)
+# Algorithm to use during alignment: mem (>70MB, contemporary samples) [default] or aln (<70MB, historic samples)
 algo="mem"
 
 # ----------------- Error messages ---------------------------------------
@@ -80,7 +77,7 @@ cat << EOF
 
 ERROR: $OPTARG does not seem to be a .fna file
 
-If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+If unsure of how to proceed run: 02_initialize_data_prep.sh -h
 
 EOF
 }
@@ -91,7 +88,7 @@ cat << EOF
 
 ERROR: $OPTARG does not seem to be a directory
 
-If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+If unsure of how to proceed run: 02_initialize_data_prep.sh -h
 
 EOF
 }
@@ -102,7 +99,7 @@ cat << EOF
 
 ERROR: $OPTARG does not seem to be a directory
 
-If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+If unsure of how to proceed run: 02_initialize_data_prep.sh -h
 
 EOF
 }
@@ -113,7 +110,7 @@ cat << EOF
 
 ERROR: -a must be either 'mem' [default] or 'aln'
 
-If unsure of how to proceed run: 02_00_init_data_prep.sh -h
+If unsure of how to proceed run: 02_initialize_data_prep.sh -h
 
 EOF
 }
@@ -182,6 +179,9 @@ else
     script_path=$(realpath "$0")
 fi
 
+# Creates working directory if it doesn't exist
+[[ -d "$WD" ]] || mkdir -m 764 "$WD"
+
 # Creates temp directory in working directory if none exist
 [[ -d "$WD"/temp ]] || mkdir -m 764 "$WD"/temp
 
@@ -200,7 +200,7 @@ for sample in "$SD"/*; do
         # Checks if currently working with museomics samples
         if [[ "$SD" == *"museomics"* ]]; then
 
-            # Checks if sample directory is pre-2000 (historic) or post-2000 (modern)
+            # Checks if sample directory is pre-2000 (historic) or post-2000 (modern) and sets the algrorithm parameter correspondingly
             if [ "$((${sample: -4}))" -gt 2000 ]; then
 
                 # Sample is modern
@@ -218,19 +218,40 @@ for sample in "$SD"/*; do
                         [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
                         [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
                         
-                        # AdapterRemoval
-                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Check the number of .fq.gz files in sample directory (assumed to be indicative of whether sample is single- or paired-end)
+                        count=$(find "$sample"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
+                        if [ "$count" == 1 ]; then
+                            
+                            # Single-end
 
-                        # Aligning to reference
-                        jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                        jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            # AdapterRemoval
+                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
-                        # Merging of alignment files
-                        jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            # Aligning to reference
+                            jid2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
 
-                        # Marking duplicates
-                        jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            # Marking duplicates
+                            jid4=$(sbatch --parsable --dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
+                        else
+
+                            # Paired-end
+
+                            # AdapterRemoval
+                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                            # Aligning to reference
+                            jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                            # Merging of alignment files
+                            jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                            # Marking duplicates
+                            jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        fi
+                        
                         # Statistics pre-filtering
                         jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
                         jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
@@ -247,7 +268,7 @@ for sample in "$SD"/*; do
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        # sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
                     else
 
@@ -273,18 +294,39 @@ for sample in "$SD"/*; do
                         [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
                         [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
                         
-                        # AdapterRemoval
-                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Check the number of .fq.gz files in sample directory (assumed to be indicative of whether sample is single- or paired-end)
+                        count=$(find "$sample"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
+                        if [ "$count" == 1 ]; then
 
-                        # Aligning to reference
-                        jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                        jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            # Single-end
 
-                        # Merging of alignment files
-                        jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            # AdapterRemoval
+                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
-                        # Marking duplicates
-                        jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            # Aligning to reference
+                            jid2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                            # Marking duplicates
+                            jid4=$(sbatch --parsable --dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        else
+
+                            # Paired-end
+
+                            # AdapterRemoval
+                            jid1=$(sbatch --parsable "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                            # Aligning to reference
+                            jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                            # Merging of alignment files
+                            jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                            # Marking duplicates
+                            jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        fi
 
                         # Statistics pre-filtering
                         jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
@@ -302,7 +344,7 @@ for sample in "$SD"/*; do
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                         sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        # sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
                     else
 
@@ -327,18 +369,35 @@ for sample in "$SD"/*; do
                     [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
                     [[ -d "$WD"/01_data_preparation/$(basename "$SD")/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
                 
-                    # AdapterRemoval
-                    jid1=$(sbatch --parsable "$script_path"/modules/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                    # Check the number of .fq.gz files in sample directory (assumed to be indicative of whether sample is single- or paired-end)
+                    count=$(find "$sample"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
+                    if [ "$count" == 1 ]; then
 
-                    # Aligning to reference
-                    jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                    jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                        # AdapterRemoval
+                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
-                    # Merging of alignment files
-                    jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Aligning to reference
+                        jid2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
 
-                    # Marking duplicates
-                    jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        # Marking duplicates
+                        jid4=$(sbatch --parsable --dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                    else
+
+                        # AdapterRemoval
+                        jid1=$(sbatch --parsable "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Aligning to reference
+                        jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                        jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                        # Merging of alignment files
+                        jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Marking duplicates
+                        jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                    fi
 
                     # Statistics pre-filtering
                     jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
@@ -356,7 +415,7 @@ for sample in "$SD"/*; do
                     sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                     sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
                     sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                    # sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                    sbatch --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
                 else
 

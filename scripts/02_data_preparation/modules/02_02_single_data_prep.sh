@@ -1,0 +1,39 @@
+#!/bin/bash
+#SBATCH --account EcoGenetics
+#SBATCH --partition normal
+#SBATCH --mem-per-cpu 8G
+#SBATCH --cpus-per-task 8
+#SBATCH --time 30:00:00
+
+# Reference genome
+RG=$1
+
+# Species directory
+SD=$2
+
+# Working directory
+WD=$3
+
+# Sample directory
+sample=$4
+
+# Choice of algorithm
+algo=$5
+
+# Align sample to reference genome
+bwa "$algo" -t 8 \
+"${RG%.*}" \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.truncated \
+| \
+
+# Sort with regards to QNAME and convert to bam format
+samtools sort -@ 7 -n -O BAM \
+-T "$WD"/temp/ \
+-o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
+-
+
+# File removal
+rm -f \
+"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.truncated
+
+exit 0

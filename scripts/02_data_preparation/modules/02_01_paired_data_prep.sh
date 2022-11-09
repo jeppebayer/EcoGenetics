@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
+#SBATCH --mem-per-cpu 8G
 #SBATCH --cpus-per-task 8
 #SBATCH --time 12:00:00
 
@@ -21,7 +21,7 @@ R1=
 
 for R2 in "$sample"/*.fq.gz ; do
     if [ "$R1" ] ; then
-        # 2nd entry - pair
+        # 2nd entry
         AdapterRemoval \
         --threads 8 \
         --file1 "$R1" \
@@ -36,7 +36,7 @@ for R2 in "$sample"/*.fq.gz ; do
         --collapse
 
     else
-        # First entry - just remember.
+        # First entry
         R1=$R2
     fi
 done

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
+#SBATCH --mem-per-cpu 8G
 #SBATCH --cpus-per-task 8
 #SBATCH --time 01:00:00
 
@@ -19,7 +19,7 @@ sample=$4
 
 # Creates flagstat file for alignment 
 samtools flagstat -@ 7 \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+"$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
 > "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.flagstat
 
 exit 0

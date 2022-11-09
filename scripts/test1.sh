@@ -44,9 +44,26 @@ RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718
 # done
 
 # echo "$gff"
-sample="bab_bab_2020"
-year="${sample: -4}"
-[ "$((${sample: -4}))" -gt 2000 ] && echo "Newer than 2000"
+
+# Gets path to script location
+# If run through sbatch or srun:
+# if [ -n "$SLURM_JOB_ID" ]; then
+#     script_path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+#     script_path=$(dirname "$script_path")
+# # If run on the frontend:
+# else
+#     script_path=$(realpath "$0")
+# fi
+
+# echo "$script_path"
+
+count=$(find $SD/Ocin_NYS-F -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
+if [ "$count" == 1 ] ; then
+  echo "$count is 1"
+else
+  echo "$count is not 1"
+fi
+
 
 exit 1
 
