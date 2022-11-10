@@ -5,10 +5,13 @@
 #SBATCH --cpus-per-task 1
 #SBATCH --time 00:30:00
 
-RG=$1
+adjustment=0.1
 
-path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+# number=$(awk -v adjustment=$adjustment 'BEGIN { printf "%.0f\n", ( 720 * adjustment) }')
+number=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment + 120) }')
+# $((2/filesize))
 
-srun echo "$path"
+
+echo "$number"
 
 exit 0

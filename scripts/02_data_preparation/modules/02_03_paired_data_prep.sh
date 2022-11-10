@@ -3,7 +3,7 @@
 #SBATCH --partition normal
 #SBATCH --mem-per-cpu 8G
 #SBATCH --cpus-per-task 8
-#SBATCH --time 36:00:00
+#SBATCH --time 20:00:00
 
 # Reference genome
 RG=$1

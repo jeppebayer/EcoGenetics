@@ -15,7 +15,7 @@ bwa index \
 
 # Adding fai index to reference
 samtools faidx \
--o "$RG".fai \
+-o "${RG%.*}".fai \
 "$RG"
 
 exit 0

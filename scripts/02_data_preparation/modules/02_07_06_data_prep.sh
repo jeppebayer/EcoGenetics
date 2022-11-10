@@ -17,11 +17,6 @@ WD=$3
 # Sample directory
 sample=$4
 
-RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
-SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F"
-WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
-sample="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F"
-
 # First checks whether a .gff file for the reference genome is available
 for file in "$(dirname "$RG")"/*.gff; do
     if [ -e "$file" ]; then
@@ -37,6 +32,7 @@ for file in "$(dirname "$RG")"/*.gff; do
         -outformat PDF \
         --java-mem-size=16G
         exit 0
+
     else
 
         # .gff file is not available

@@ -181,7 +181,7 @@ else
 fi
 
 # Creates working directory if it doesn't exist
-[[ -d "$WD" ]] || mkdir -m 764 "$WD"
+[[ -d "$WD" ]] || mkdir -m 764 "$WD" # || mkdir -m 764 "$PWD"/"$WD"
 
 # Creates temp directory in working directory if none exist
 [[ -d "$WD"/temp ]] || mkdir -m 764 "$WD"/temp
@@ -205,6 +205,17 @@ for sample in "$SD"/*; do
         for file in "$sample"/*.bam; do
             if [ ! -e "$file" ]; then
                 
+                # Checks sample file size
+                filesize=
+                for file in "$sample"/*.fna; do
+                    if [ ! "$filesize" ]; then
+                        filesize=$(wc -c < "$file")
+                    fi
+                done
+
+                # Change requested time on nodes depending on filesize comparative to R1 Ocin_NYS-F
+                adjustment=$(awk -v filesize=$filesize 'BEGIN { print ( filesize / 93635424798 ) }')
+
                 # Creates sample directory in species directory if none exist
                 [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
 
@@ -226,13 +237,54 @@ for sample in "$SD"/*; do
                         if [ "$count" == 1 ]; then
                             
                             # Single-end
+                            
+                            # AdapterRemoval
+                            jid1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment + 120) }') "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                            # Aligning to reference
+                            jid2=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment + 120) }') --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                            # Marking duplicates
+                            jid4=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment + 120) }')--dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
                         
                         else
 
                             # Paired-end
+                            
+                            # AdapterRemoval
+                            jid1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment +120 ) }') "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                            # Aligning to reference
+                            jid2_1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment +120 ) }') --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            jid2_2=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment +120 ) }') --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                            # Merging of alignment files
+                            jid3=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1200 * adjustment +120 ) }') --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                            # Marking duplicates
+                            jid4=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment +120 ) }') --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
                         fi
+                        
+                        # Statistics pre-filtering
+                        jid5_1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_2=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_3=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 360 * adjustment + 120 ) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_4=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
 
+
+                        # Removal of duplicates, unmapped reads and low quality mappings
+                        jid6=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1440 * adjustment + 120 ) }') --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+
+                        # Statistics post-filtering
+                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 360 * adjustment + 120 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 360 * adjustment + 120 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1200 * adjustment + 120 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+
+                        # Log messages
                         if [ "$count" == 1 ]; then
                             echo "$sample has been sent to queue as a single-end modern sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         else
@@ -256,7 +308,9 @@ for sample in "$SD"/*; do
 
                         fi
 
+                        # Log messages
                         if [ "$count" == 1 ]; then
+                        
                             echo "$sample has been sent to queue as a single-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         else
                             echo "$sample has been sent to queue as a pair-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
@@ -278,14 +332,11 @@ for sample in "$SD"/*; do
 
                     fi
 
+                    # Log messages
                     if [ "$count" == 1 ]; then
-
                         echo "$sample has been sent to queue as a single-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
-
                     else
-
                         echo "$sample has been sent to queue as a pair-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
-
                     fi
 
                 fi
@@ -309,3 +360,7 @@ done
 echo "Log file can be found here: $WD/01_data_preparation/$(basename "$SD")/log_$(basename "$SD")_$(date +"%Y-%m-%d").txt"
 
 exit 0
+
+93635424798
+5438628585
+
