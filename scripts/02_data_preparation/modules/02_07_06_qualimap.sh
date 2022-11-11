@@ -27,7 +27,7 @@ for file in "$(dirname "$RG")"/*.gff; do
         qualimap bamqc \
         -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
         -gff "$gff" \
-        -outdir "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/qualimap \
+        -outdir "$SD"/"$(basename "$sample")"/qualimap \
         -outfile "$(basename "$sample")"_qualimap.pdf \
         -outformat PDF \
         --java-mem-size=16G
@@ -38,7 +38,7 @@ for file in "$(dirname "$RG")"/*.gff; do
         # .gff file is not available
         qualimap bamqc \
         -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-        -outdir "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/qualimap \
+        -outdir "$SD"/"$(basename "$sample")"/qualimap \
         -outfile "$(basename "$sample")"_qualimap.pdf \
         -outformat PDF \
         --java-mem-size=16G

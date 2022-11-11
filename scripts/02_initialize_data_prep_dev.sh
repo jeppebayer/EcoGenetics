@@ -38,7 +38,7 @@ the script will automatically try to detect whether the sample directory is cont
 and automatically applies the corresponding algorithm. This means that if your samples are in the 
 museomics directory you do not need to specify an algorithm.
 
-PARAMETERS:
+PARAMETERS (must be assigned):
     -r  FILE            Species specific reference genome, abosolute path (reference genome in FASTA format)
     -s  DIRECTORY       Species specific sample directory, abosolute path (Do NOT end with '/')
     -d  DIRECTORY       Working directory, abosolute path (Do NOT end with '/')
@@ -181,16 +181,16 @@ else
 fi
 
 # Creates working directory if it doesn't exist
-[[ -d "$WD" ]] || mkdir -m 764 "$WD" # || mkdir -m 764 "$PWD"/"$WD"
+[[ -d "$WD" ]] || mkdir -m 775 "$WD" # || mkdir -m 764 "$PWD"/"$WD"
 
 # Creates temp directory in working directory if none exist
-[[ -d "$WD"/temp ]] || mkdir -m 764 "$WD"/temp
+[[ -d "$WD"/temp ]] || mkdir -m 775 "$WD"/temp
 
 # Creates 01_data_preparation directory in working directory if none exist
-[[ -d "$WD"/01_data_preparation ]] || mkdir -m 764 "$WD"/01_data_preparation
+[[ -d "$WD"/01_data_preparation ]] || mkdir -m 775 "$WD"/01_data_preparation
 
 # Creates species directory in 01_data_preparation directory if none exist
-[[ -d "$WD"/01_data_preparation/"$(basename "$SD")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"
+[[ -d "$WD"/01_data_preparation/"$(basename "$SD")" ]] || mkdir -m 775 "$WD"/01_data_preparation/"$(basename "$SD")"
 
 # Creates log file
 touch "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
@@ -217,11 +217,14 @@ for sample in "$SD"/*; do
                 adjustment=$(awk -v filesize=$filesize 'BEGIN { print ( filesize / 93635424798 ) }')
 
                 # Creates sample directory in species directory if none exist
-                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
+                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")" ]] || mkdir -m 775 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"
 
                 # Creates pre- and post-filtering directory in sample directory if none exist
-                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
-                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
+                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 775 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats
+                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 775 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats
+
+                # Create folder for STDOUT files generated sbatch
+                [[ -d "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch ]] || mkdir -m 775 "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch
 
                 # Checks if currently working with museomics samples
                 if [[ "$SD" == *"museomics"* ]]; then
@@ -238,58 +241,184 @@ for sample in "$SD"/*; do
                             
                             # Single-end
                             
+                            echo "$(basename "$sample") is sent to the queue as a single-end modern sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
                             # AdapterRemoval
-                            jid1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment + 120) }') "$script_path"/modules/02_01_single_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            jid1=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 720 * adjustment + 120) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    "$script_path"/modules/02_01_single_adapterremoval.sh "$RG" "$SD" "$WD" "$sample")
+                            
+                            echo "'AdapterRemoval' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
                             # Aligning to reference
-                            jid2=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment + 120) }') --dependency=afterany:"$jid1" "$script_path"/modules/02_02_single_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            jid2=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1800 * adjustment + 120) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    --dependency=afterany:"$jid1" \
+                                    "$script_path"/modules/02_02_single_alignment.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                            echo "'Alignment' job has been submitted for $(basename "$sample") -- Job ID: $jid2" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
                             # Marking duplicates
-                            jid4=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment + 120) }')--dependency=afterany:"$jid2" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            jid4=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1800 * adjustment + 120) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    --dependency=afterany:"$jid2" \
+                                    "$script_path"/modules/02_04_markduplicates.sh "$RG" "$SD" "$WD" "$sample")
+
+                            echo "'Marking duplicates' job has been submitted for $(basename "$sample") -- Job ID: $jid4" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         
                         else
 
                             # Paired-end
                             
+                            echo "$(basename "$sample") is sent to the queue as a pair-end modern sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
                             # AdapterRemoval
-                            jid1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment +120 ) }') "$script_path"/modules/02_01_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            jid1=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 720 * adjustment +120 ) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    "$script_path"/modules/02_01_paired_adapterremoval.sh "$RG" "$SD" "$WD" "$sample")
+                            
+                            echo "'AdapterRemoval' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
                             # Aligning to reference
-                            jid2_1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment +120 ) }') --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_01_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
-                            jid2_2=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment +120 ) }') --dependency=afterany:"$jid1" "$script_path"/modules/02_02_paired_02_data_prep.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            jid2_1=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1800 * adjustment +120 ) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    --dependency=afterany:"$jid1" \
+                                    "$script_path"/modules/02_02_paired_01_alignment.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+                            jid2_2=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1800 * adjustment +120 ) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    --dependency=afterany:"$jid1" \
+                                    "$script_path"/modules/02_02_paired_02_alignment.sh "$RG" "$SD" "$WD" "$sample" "$algo")
+
+                            echo "'Alignment of paired ends' job has been submitted for $(basename "$sample") -- Job ID: $jid2_1" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                            echo "'Alignment of collapsed single end' job has been submitted for $(basename "$sample") -- Job ID: $jid2_2" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
                             # Merging of alignment files
-                            jid3=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1200 * adjustment +120 ) }') --dependency=afterany:"$jid2_1":"$jid2_2" "$script_path"/modules/02_03_paired_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            jid3=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1200 * adjustment +120 ) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    --dependency=afterany:"$jid2_1":"$jid2_2" \
+                                    "$script_path"/modules/02_03_paired_merge.sh "$RG" "$SD" "$WD" "$sample")
+
+                            echo "'Merging' job has been submitted for $(basename "$sample") -- Job ID: $jid3" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
                             # Marking duplicates
-                            jid4=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1800 * adjustment +120 ) }') --dependency=afterany:"$jid3" "$script_path"/modules/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                            jid4=$(sbatch \
+                                    --parsable \
+                                    --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1800 * adjustment +120 ) }')" \
+                                    --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                    --dependency=afterany:"$jid3" \
+                                    "$script_path"/modules/02_04_markduplicates.sh "$RG" "$SD" "$WD" "$sample")
+                            
+                            echo "'Marking duplicates' job has been submitted for $(basename "$sample") -- Job ID: $jid4" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
                         fi
                         
                         # Statistics pre-filtering
-                        jid5_1=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_2=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_3=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 360 * adjustment + 120 ) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                        jid5_4=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60) }') --dependency=afterany:"$jid4" "$script_path"/modules/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_1=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 60 * adjustment + 60) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid4" \
+                                "$script_path"/modules/02_05_01_prestats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_2=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 60 * adjustment + 60) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid4" \
+                                "$script_path"/modules/02_05_02_prestats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_3=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 360 * adjustment + 120 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid4" \
+                                "$script_path"/modules/02_05_03_prestats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid5_4=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 60 * adjustment + 60) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid4" \
+                                "$script_path"/modules/02_05_04_prestats.sh "$RG" "$SD" "$WD" "$sample")
+                        
+                        echo "'Pre-filtering statistics (idxstats)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_1" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Pre-filtering statistics (flagstat)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_2" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Pre-filtering statistics (coverage)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_3" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Pre-filtering statistics (stats)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_4" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
 
                         # Removal of duplicates, unmapped reads and low quality mappings
-                        jid6=$(sbatch --parsable --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1440 * adjustment + 120 ) }') --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$script_path"/modules/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
+                        jid6=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1440 * adjustment + 120 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" \
+                                "$script_path"/modules/02_06_filtering.sh "$RG" "$SD" "$WD" "$sample")
+
+                        echo "'Filtering' job has been submitted for $(basename "$sample") -- Job ID: $jid6" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
                         # Statistics post-filtering
-                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 360 * adjustment + 120 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 360 * adjustment + 120 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 60 * adjustment + 60 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                        sbatch --time=$(awk -v adjustment=$adjustment 'BEGIN { print int( 1200 * adjustment + 120 ) }') --dependency=afterany:"$jid6" "$script_path"/modules/02_07_06_data_prep.sh "$RG" "$SD" "$WD" "$sample"
+                        jid7_1=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 60 * adjustment + 60 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid6" \
+                                "$script_path"/modules/02_07_01_poststats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid7_2=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 60 * adjustment + 60 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid6" \
+                                "$script_path"/modules/02_07_02_poststats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid7_3=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 360 * adjustment + 120 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid6" \
+                                "$script_path"/modules/02_07_03_poststats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid7_4=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 360 * adjustment + 120 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid6" \
+                                "$script_path"/modules/02_07_04_poststats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid7_5=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 60 * adjustment + 60 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid6" \
+                                "$script_path"/modules/02_07_05_poststats.sh "$RG" "$SD" "$WD" "$sample")
+                        jid7_6=$(sbatch \
+                                --parsable \
+                                --time="$(awk -v adjustment="$adjustment" 'BEGIN { print int( 1200 * adjustment + 120 ) }')" \
+                                --output="$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch \
+                                --dependency=afterany:"$jid6" \
+                                "$script_path"/modules/02_07_06_qualimap.sh "$RG" "$SD" "$WD" "$sample")
 
-                        # Log messages
-                        if [ "$count" == 1 ]; then
-                            echo "$sample has been sent to queue as a single-end modern sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
-                        else
-                            echo "$sample has been sent to queue as a pair-end modern sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
-                        fi
+                        echo "'Post-filtering statistics (flagstat)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_1" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Post-filtering statistics (idxstats)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_2" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Post-filtering statistics (coverage)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_3" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Post-filtering statistics (readchange)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_4" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Post-filtering statistics (stats)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_5" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                        echo "'Post-filtering statistics (qualimap)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_6" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
+                        # Clean up of empty stdout files
+                        sbatch \
+                                --output=/dev/null \
+                                --error=/dev/null \
+                                --dependency=afterany:"$jid7_1":"$jid7_2":"$jid7_3":"$jid7_4":"$jid7_5":"$jid7_6" \
+                                "$script_path"/modules/02_08_data_prep.sh "$RG" "$SD" "$WD" "$sample"
 
                     else
 
@@ -301,19 +430,15 @@ for sample in "$SD"/*; do
                         if [ "$count" == 1 ]; then
                             
                             # Single-end
-                        
+
+                            echo "$(basename "$sample") is sent to the queue as a single-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
                         else
 
                             # Paired-end
+                            
+                            echo "$(basename "$sample") is sent to the queue as a pair-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
-                        fi
-
-                        # Log messages
-                        if [ "$count" == 1 ]; then
-                        
-                            echo "$sample has been sent to queue as a single-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
-                        else
-                            echo "$sample has been sent to queue as a pair-end historic sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                         fi
 
                     fi
@@ -326,24 +451,21 @@ for sample in "$SD"/*; do
 
                         # Single-end
                         
+                        echo "$(basename "$sample") is sent to the queue as a single-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+
                     else
 
                         # Paired-end
 
-                    fi
+                        echo "$(basename "$sample") is sent to the queue as a pair-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
-                    # Log messages
-                    if [ "$count" == 1 ]; then
-                        echo "$sample has been sent to queue as a single-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
-                    else
-                        echo "$sample has been sent to queue as a pair-end sample" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
                     fi
 
                 fi
 
             else
 
-                echo "$sample already contains a .bam file, $file, and is skipped" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+                echo "$(basename "$sample") already contains a .bam file, $(basename "$file"), and is skipped" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
             fi
 
@@ -351,7 +473,7 @@ for sample in "$SD"/*; do
 
     else
 
-        echo "$sample is an empty directory and is skipped" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+        echo "$(basename "$sample") is an empty directory and is skipped" >> "$WD"/01_data_preparation/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
 
     fi
 
@@ -360,7 +482,4 @@ done
 echo "Log file can be found here: $WD/01_data_preparation/$(basename "$SD")/log_$(basename "$SD")_$(date +"%Y-%m-%d").txt"
 
 exit 0
-
-93635424798
-5438628585
 

@@ -57,23 +57,24 @@ RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718
 
 # echo "$script_path"
 
-count=$(find $SD/Ocin_NYS-F -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
-if [ "$count" == 1 ] ; then
-  echo "$count is 1"
-else
-  echo "$count is not 1"
-fi
+# count=$(find $SD/Ocin_NYS-F -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
+# if [ "$count" == 1 ] ; then
+#   echo "$count is 1"
+# else
+#   echo "$count is not 1"
+# fi
 
+# exit 1
 
-exit 1
+path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+path=$(dirname "$path")
 
-# path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
-# path=$(dirname "$path")
+touch "$path"/testlog.txt
 
-# # AdapterRemoval
-# jid1=$(sbatch --parsable "$path"/test2.sh)
+# AdapterRemoval
+jid1=$(sbatch --parsable "$path"/test2.sh > "$path"/testlog.txt)
 
 # Aligning to reference
-# sbatch --parsable --dependency=aftany:"$jid1" /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh
+sbatch --parsable --dependency=aftany:"$jid1" /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh
 
 # exit 0

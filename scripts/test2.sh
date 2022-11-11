@@ -7,6 +7,6 @@
 
 RG=$1
 
-srun echo "$RG"
+echo "$RG"
 
 exit 0
