@@ -1,21 +1,12 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 8G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 12:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+RG=$1 # Reference genome
+SD=$2 # Species directory
+WD=$3 # Working directory
+sample=$4 # Sample directory
+cpus=$5 # Number of CPUs
 
 R1=
 

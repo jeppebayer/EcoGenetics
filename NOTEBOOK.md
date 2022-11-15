@@ -22,13 +22,47 @@
 
 ## **TO-DO**
 
+### Fra gff til intergene.bed som indeholder neutrale/intergene positioner
+
+grep 'gene' gff_file > gff_file_gene
+
+Tjek at det er kolonne 1,4 og 5 vi ønsker
+
+```bash
+awk '{print $1, $4, $5}' gff_file_gene > gene.bed
+```
+
+conda install -c bioconda bioawk
+
+print the length of all scaffolds
+
+```bash
+bioawk  -v OFS='\t' -c fastx '{ print $name, length($seq) }' < genome_sequence.fa > genome.txt
+
+sort -k1,1 -k2,2n < gene.bed > gene_sorted.bed
+
+sort -k1,1 -k2,2n < genome.txt > genome_sorted.txt
+```
+
+conda install -c bioconda bedtools
+
+```bash
+bedtools complement -i gene_sorted.bed -g genome_sorted.txt > intergenic.bed
+```
+
+### Pileup -> vcf
+
+```bash
+bcftools call -vmO v -o <study.vcf>
+```
+
+---
+
 After success of individual steps create pipelines to simplify workflow. For instance, combine mapping to reference genome and conversion to bam file, so there is no intermidiate storage of sam files
 
 Always check for option to allocate multiple threads/cores to a job reduce computaion time
 
 Look in to the use of the tee command for splitting output using pipes
-
-**Use AdapterRemoval to collapse overlapping regions. Align truncated pair files, align collapsed file. Merge the two created bam files, then sort and continue as standard**
 
 ### **Probably not going to use platypus**
 

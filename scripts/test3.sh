@@ -8,10 +8,11 @@
 adjustment=0.1
 
 # number=$(awk -v adjustment=$adjustment 'BEGIN { printf "%.0f\n", ( 720 * adjustment) }')
-number=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment + 120) }')
+# number=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment + 120) }')
 # $((2/filesize))
+# echo "$number"
 
-
-echo "$number"
+echo "$4"
+# echo "$WD"
 
 exit 0

@@ -66,15 +66,26 @@ RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718
 
 # exit 1
 
-path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
-path=$(dirname "$path")
+# path=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
+# path=$(dirname "$path")
 
-touch "$path"/testlog.txt
+# touch "$path"/testlog.txt
+
+# Algorithm to use during alignment: mem (>70MB, contemporary samples) [default] or aln (<70MB, historic samples)
+algo="mem"
+
+# Define memory per cpu in G (must be integer)
+memory="8"
+
+# Define number of cpus to be used (must be integer)
+cpus="8"
+
+all_variables=("$RG" "$SD" "$WD" "$algo" "$memory" "$cpus")
 
 # AdapterRemoval
-jid1=$(sbatch --parsable "$path"/test2.sh > "$path"/testlog.txt)
+# jid1=$(sbatch --parsable "$path"/test2.sh > "$path"/testlog.txt)
 
 # Aligning to reference
-sbatch --parsable --dependency=aftany:"$jid1" /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh
+sbatch /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh "${all_variables[@]}"
 
-# exit 0
+exit 0
