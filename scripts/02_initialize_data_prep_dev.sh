@@ -254,6 +254,8 @@ touch "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/log_"$(basename "$S
 # Loops through all sample folders within species specific sample directory
 for sample in "$SD"/*; do
 
+    variables=("$RG" "$SD" "$WD" "$algo" "$memory" "$cpus" "$sample")
+
     # Checks if sample folder is empty
     if [ "$(ls -A "$sample")" ]; then
         
