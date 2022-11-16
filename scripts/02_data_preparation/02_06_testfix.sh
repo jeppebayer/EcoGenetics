@@ -1,14 +1,21 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
+#SBATCH --mem-per-cpu 16G
+#SBATCH --cpus-per-task 8
+#SBATCH --time 20:00:00
 
-cpus=$1 # Number of CPUs
-RG=$2 # Reference genome
-SD=$3 # Species directory
-WD=$4 # Working directory
-sample=$5 # Sample directory
-script_path=$6 # Path to script location
-algo=$7 # Chosen algorithm
+# Reference genome
+RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Maniola_jurtina/GCF_905333055.1_ilManJurt1.1_genomic.fna"
+
+# Species directory
+SD="/home/jepe/EcoGenetics/BACKUP/museomics/Maniola_jurtina"
+
+# Working directory
+WD=$3
+
+# Sample directory
+sample="/home/jepe/EcoGenetics/BACKUP/museomics/Maniola_jurtina/MaJu_01_J_2022"
 
 export DISPLAY=:0
 
@@ -22,10 +29,10 @@ for file in "$(dirname "$RG")"/*.gff; do
         qualimap bamqc \
         -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
         -gff "$gff" \
-        -outdir "$SD"/"$(basename "$sample")"/qualimap \
+        -outdir /home/jepe/EcoGenetics/people/Jeppe_Bayer/data/qualimap \
         -outfile "$(basename "$sample")"_qualimap.pdf \
         -outformat PDF \
-        --java-mem-size=20G
+        --java-mem-size=16G
         exit 0
 
     else
@@ -33,10 +40,10 @@ for file in "$(dirname "$RG")"/*.gff; do
         # .gff file is not available
         qualimap bamqc \
         -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-        -outdir "$SD"/"$(basename "$sample")"/qualimap \
+        -outdir /home/jepe/EcoGenetics/people/Jeppe_Bayer/data/qualimap \
         -outfile "$(basename "$sample")"_qualimap.pdf \
         -outformat PDF \
-        --java-mem-size=20G
+        --java-mem-size=16G
         exit 0
     fi
 done

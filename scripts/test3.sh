@@ -12,7 +12,11 @@ adjustment=0.1
 # $((2/filesize))
 # echo "$number"
 
-echo "$4"
+# export DISPLAY=:0
+
+# echo "$PWD"
 # echo "$WD"
+
+echo "$(readlink -f "$1")"
 
 exit 0

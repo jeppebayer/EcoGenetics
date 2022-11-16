@@ -1,30 +1,23 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 8G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 24:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Removes duplicates and unmapped reads and keeps properly aligned reads with a MapQ >= 20
-samtools view -b -@ 7 \
+samtools view -b -@ "$(("$cpus" - 1))" \
 -F 3844 -q 20 \
 -o "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam && \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam && \
 
 # Creates bai index for filtered alignment
-samtools index -@ 7 -b \
+samtools index -@ "$(("$cpus" - 1))" -b \
 "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
 > "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam.bai
 

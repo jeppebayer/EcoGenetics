@@ -7,7 +7,6 @@ Needed software packages:
 - AdapterRemoval
 - bwa
 - samtools
-- awk
 - qualimap
 
 Conda environmnet used:  
@@ -18,123 +17,6 @@ Conda environmnet used:
 (Dependency tree slightly outdated)
 ![dependency_tree](../resources/dependency_chart_data_preparation.png)
 
-### Script 00
-
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
-#SBATCH --mem-per-cpu 2G
-#SBATCH --cpus-per-task 1
-#SBATCH --time 00:30:00
-
-# ------------------------------------------------------------------------
-# Created by Jeppe Bayer
-# 
-# Master's student at Aarhus University
-# Department of Genetics, Ecology and Evolution
-# Centre for EcoGenetics
-# 
-# For troubleshooting or questions:
-# Email: jeppe.bayer@bio.au.dk
-# ------------------------------------------------------------------------
-
-# ----------------- Description ------------------------------------------
-
-# Script for initializing data preparation procedure for sequence data >70MB
-# Tested and working using EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
-
-
-# ----------------- Configuration ----------------------------------------
-
-# Directory containing scripts, abosolute path (Do NOT end with '/')
-scripts="/home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/02_data_preparation"
-
-# Species specific reference genome, abosolute path (reference genome in FASTA format)
-RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
-
-# Species specific sample directory, abosolute path (Do NOT end with '/')
-SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
-
-# Working directory, abosolute path (Do NOT end with '/')
-WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
-
-# ----------------- Script Queue -----------------------------------------
-
-# Creates temp directory in working directory if none exist
-[[ -d $WD/temp ]] || mkdir -m 764 $WD/temp
-
-# Creates 01_data_preparation directory in working directory if none exist
-[[ -d $WD/01_data_preparation ]] || mkdir -m 764 $WD/01_data_preparation
-
-# Creates species directory in 01_data_preparation directory if none exist
-[[ -d $WD/01_data_preparation/$(basename $SD) ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"
-
-# Loops through all sample folders within species specific sample directory
-for sample in "$SD"/*; do
-
-    # Checks if sample folder is empty
-    if [ "$(ls -A "$sample")" ]; then
-
-        for file in "$sample"/*.bam; do
-
-            # Checks whether a .bam file already exists within sample folder, indicating samples have already been processed
-            if [ ! -e "$file" ]; then
-                
-                # Creates sample directory in species directory if none exist
-                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")" ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"
-                
-                # Creates pre- and post-filtering directory in sample directory if none exist
-                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/pre_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/pre_filter_stats
-                [[ -d $WD/01_data_preparation/$(basename $SD)/"$(basename "$sample")"/post_filter_stats ]] || mkdir -m 764 "$WD"/01_data_preparation/"$(basename $SD)"/"$(basename "$sample")"/post_filter_stats
-                
-                # AdapterRemoval
-                jid1=$(sbatch --parsable "$scripts"/02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                # Aligning to reference
-                jid2_1=$(sbatch --parsable --dependency=afterany:"$jid1" "$scripts"/02_02_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid2_2=$(sbatch --parsable --dependency=afterany:"$jid1" "$scripts"/02_02_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                # Merging of alignment files
-                jid3=$(sbatch --parsable --dependency=afterany:"$jid2_1":"$jid2_2" "$scripts"/02_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                # Marking duplicates
-                jid4=$(sbatch --parsable --dependency=afterany:"$jid3" "$scripts"/02_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                # Statistics pre-filtering
-                jid5_1=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_01_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_2=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_02_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_3=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_03_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-                jid5_4=$(sbatch --parsable --dependency=afterany:"$jid4" "$scripts"/02_05_04_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-
-                # Removal of duplicates, unmapped reads and low quality mappings
-                jid6=$(sbatch --parsable --dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" "$scripts"/02_06_data_prep.sh "$RG" "$SD" "$WD" "$sample")
-
-                # Statistics post-filtering
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_01_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_02_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_03_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_04_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-                sbatch --dependency=afterany:"$jid6" "$scripts"/02_07_05_data_prep.sh "$RG" "$SD" "$WD" "$sample"
-
-            else
-
-                srun echo "$sample already contains a .bam file, $file, and is skipped"
-            fi
-
-        done
-
-    else
-
-        srun echo "$sample is an empty directory and is skipped"
-    fi
-
-done
-
-exit 0
-```
-
 ## Step 1: Removal of overlapping sequences
 
 ### Script 01
@@ -143,27 +25,20 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 12:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 R1=
 
 for R2 in "$sample"/*.fq.gz ; do
     if [ "$R1" ] ; then
-        # 2nd entry - pair
+        # 2nd entry
         AdapterRemoval \
         --threads 8 \
         --file1 "$R1" \
@@ -172,16 +47,22 @@ for R2 in "$sample"/*.fq.gz ; do
         --adapter2 AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG \
         --minquality 25 \
         --minlength 20 \
-        --basename "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed \
+        --basename "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed \
         --trimns \
         --trimqualities \
         --collapse
 
     else
-        # First entry - just remember.
+        # First entry
         R1=$R2
     fi
 done
+
+# File removal
+rm -f \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.discarded \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.settings \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.singleton.truncated
 
 exit 0
 ```
@@ -192,34 +73,32 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 30:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Align sample to reference genome
-bwa mem -t 8 \
+bwa "$algo" -t "$cpus" \
 "${RG%.*}" \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated \
 | \
 
 # Sort with regards to QNAME and convert to bam format
-samtools sort -@ 7 -n -O BAM \
+samtools sort -@ "$(("$cpus" - 1))" -n -O BAM \
 -T "$WD"/temp/ \
--o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
+-o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
 -
+
+# File removal
+rm -f \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated
 
 exit 0
 ```
@@ -230,39 +109,38 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 30:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Concatenating collapsed single-end files
 cat \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed.truncated \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_all_collapsed
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed.truncated \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.all_collapsed
 
 # Align sample to reference genome
-bwa mem -t 8 \
+bwa "$algo" -t "$cpus" \
 "${RG%.*}" \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_all_collapsed \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.all_collapsed \
 | \
 
 # Sort with regards to QNAME and convert to bam format
-samtools sort -@ 7 -n -O BAM \
+samtools sort -@ "$(("$cpus" - 1))" -n -O BAM \
 -T "$WD"/temp/  \
--o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam \
+-o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam \
 -
+
+# File removal
+rm -f \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed.truncated \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.all_collapsed
 
 exit 0
 ```
@@ -273,28 +151,26 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 36:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Merge R1R2 and collapsed file to one name-sorted bam file
-samtools merge -@ 7 \
--o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
+samtools merge -@ "$(("$cpus" - 1))" \
+-o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
 -c -p -n \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam
+
+# File removal
+rm -f \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam
 
 exit 0
 ```
@@ -307,38 +183,35 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 30:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Add fixmate tag to alignment. Can only be done on name sorted alignment
-samtools fixmate -@ 7 -m -O BAM \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
+samtools fixmate -@ "$(("$cpus" - 1))" -m -O BAM \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
 - | \
 
 # Position sort alignment and pipe output
-samtools sort -@ 7 -O BAM \
+samtools sort -@ "$(("$cpus" - 1))" -O BAM \
 -T "$WD"/temp/ \
 - | \
 
 # Mark duplicates and save output as .coordinatesort.bam. Also outputs some realted statistics
-samtools markdup -@ 7 -s \
--f "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.markdupstats \
+samtools markdup -@ "$(("$cpus" - 1))" -s \
+-f "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.markdupstats \
 -T "$WD"/temp/ \
 - \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
+
+# File removal
+rm -f \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam
 
 exit 0
 ```
@@ -351,31 +224,28 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 1:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates bai index for alignment
-samtools index -@ 7 -b \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam.bai ; \
+samtools index -@ "$(("$cpus" - 1))" -b \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam.bai ; \
 
 # Creates idxstats file for alignment
-samtools idxstats -@ 7 \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.idxstats
+samtools idxstats -@ "$(("$cpus" - 1))" \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.idxstats
+
+# File removal
+rm -f \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam.bai
 
 exit 0
 ```
@@ -386,26 +256,19 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 1:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates flagstat file for alignment 
-samtools flagstat -@ 7 \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.flagstat
+samtools flagstat -@ "$(("$cpus" - 1))" \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.flagstat
 
 exit 0
 ```
@@ -416,26 +279,19 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 1:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates coverage file for alignment
 samtools coverage \
--o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.coverage \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
+-o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.coverage \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
 
 exit 0
 ```
@@ -446,27 +302,20 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 1:00:00
 
-# Reference genome
-RG=$1
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
-
-# Creates coverage file for alignment
-samtools stats -@ 7 \
+# Creates stat file for alignment
+samtools stats -@ "$(("$cpus" - 1))" \
 -c 1,1000,1 \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.stats
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.stats
 
 exit 0
 ```
@@ -479,32 +328,25 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 24:00:00
 
-# Reference genome
-RG=$1
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
-
-# Removes duplicates, unmapped reads, supplementary alignments, secondary alignments and  reads with a MapQ >= 20
-samtools view -b -@ 7 \
+# Removes duplicates and unmapped reads and keeps properly aligned reads with a MapQ >= 20
+samtools view -b -@ "$(("$cpus" - 1))" \
 -F 3844 -q 20 \
--o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam && \
+-o "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam && \
 
 # Creates bai index for filtered alignment
-samtools index -@ 7 -b \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam.bai
+samtools index -@ "$(("$cpus" - 1))" -b \
+"$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+> "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam.bai
 
 exit 0
 ```
@@ -517,26 +359,19 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 01:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates flagstat file for alignment 
-samtools flagstat -@ 7 \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.flagstat
+samtools flagstat -@ "$(("$cpus" - 1))" \
+"$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.flagstat
 
 exit 0
 ```
@@ -547,26 +382,19 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 01:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates idxstats file for alignment
-samtools idxstats -@ 7 \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.idxstats
+samtools idxstats -@ "$(("$cpus" - 1))" \
+"$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.idxstats
 
 exit 0
 ```
@@ -577,26 +405,19 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 01:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates coverage file for alignment
 samtools coverage \
--o "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.coverage \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam
+-o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.coverage \
+"$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam
 
 exit 0
 ```
@@ -607,34 +428,31 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 06:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates text file listing number of reads in markdup file on first line
 # number of reads in filtered file on second line and % remaining reads on the third line
-samtools view -@ 7 -c \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange && \
-samtools view -@ 7 -c \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
->> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange && \
+samtools view -@ "$(("$cpus" - 1))" -c \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange && \
+samtools view -@ "$(("$cpus" - 1))" -c \
+"$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+>> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange && \
 awk \
 'BEGIN{RS = "" ; FS = "\n"}{print "\n", $2/$1*100, "%"}' \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange \
->> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange \
+>> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange
+
+# File removal
+rm -f \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
 
 exit 0
 ```
@@ -645,28 +463,68 @@ exit 0
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 1:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Creates coverage file for alignment
-samtools stats -@ 7 \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
-> "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.stats
+samtools stats -@ "$(("$cpus" - 1))" \
+"$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.stats
 
 exit 0
+```
+
+### Script 07_06
+
+```bash
+#!/bin/bash
+#SBATCH --account EcoGenetics
+#SBATCH --partition normal
+
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
+
+export DISPLAY=:0
+
+# First checks whether a .gff file for the reference genome is available
+for file in "$(dirname "$RG")"/*.gff; do
+    if [ -e "$file" ]; then
+        
+        # .gff file is available
+        gff=$file
+
+        qualimap bamqc \
+        -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+        -gff "$gff" \
+        -outdir "$SD"/"$(basename "$sample")"/qualimap \
+        -outfile "$(basename "$sample")"_qualimap.pdf \
+        -outformat PDF \
+        --java-mem-size=20G
+        exit 0
+
+    else
+
+        # .gff file is not available
+        qualimap bamqc \
+        -bam "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
+        -outdir "$SD"/"$(basename "$sample")"/qualimap \
+        -outfile "$(basename "$sample")"_qualimap.pdf \
+        -outformat PDF \
+        --java-mem-size=20G
+        exit 0
+    fi
+done
 ```
 
 [Next Procedure](initial_analysis_procedure.md)

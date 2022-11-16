@@ -82,10 +82,41 @@ cpus="8"
 
 all_variables=("$RG" "$SD" "$WD" "$algo" "$memory" "$cpus")
 
+for ref in /home/"$USER"/EcoGenetics/BACKUP/reference_genomes/"$(basename "$SD")"/*.fna; do
+    RG=$ref
+    break
+done
+
 # AdapterRemoval
 # jid1=$(sbatch --parsable "$path"/test2.sh > "$path"/testlog.txt)
 
 # Aligning to reference
-sbatch /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh "${all_variables[@]}"
+# sbatch /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh "${all_variables[@]}"
+# sbatch /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh "$RG"
+
+queue()
+{
+cat << EOF
+#!/bin/bash
+#SBATCH --account EcoGenetics
+#SBATCH --partition normal
+#SBATCH --mem-per-cpu $1G
+#SBATCH --cpus-per-task $2
+#SBATCH --time 00:30:00
+#SBATCH --output=isit3.out
+
+echo "Hello"
+
+exit 0
+EOF
+}
+
+SD="this/path/is/no/good/"
+
+if [ "${SD: -1}" == "/" ]; then
+    SD=${SD:0:((${#SD} - 1))}
+fi
+
+echo $SD
 
 exit 0

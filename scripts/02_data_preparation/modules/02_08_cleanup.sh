@@ -5,19 +5,15 @@
 #SBATCH --cpus-per-task 1
 #SBATCH --time 00:30:00
 
-# Reference genome
-RG=$1
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
-
-for file in "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch/*; do
+for file in "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch/*; do
     if [ ! -s "$file" ]; then
         rm -f "$file"
     fi

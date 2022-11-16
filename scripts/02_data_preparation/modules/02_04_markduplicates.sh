@@ -1,41 +1,34 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 8G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 30:00:00
 
-# Reference genome
-RG=$1
-
-# Species directory
-SD=$2
-
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+script_path=$6 # Path to script location
+algo=$7 # Chosen algorithm
 
 # Add fixmate tag to alignment. Can only be done on name sorted alignment
-samtools fixmate -@ 7 -m -O BAM \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
+samtools fixmate -@ "$(("$cpus" - 1))" -m -O BAM \
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
 - | \
 
 # Position sort alignment and pipe output
-samtools sort -@ 7 -O BAM \
+samtools sort -@ "$(("$cpus" - 1))" -O BAM \
 -T "$WD"/temp/ \
 - | \
 
 # Mark duplicates and save output as .coordinatesort.bam. Also outputs some realted statistics
-samtools markdup -@ 7 -s \
--f "$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.markdupstats \
+samtools markdup -@ "$(("$cpus" - 1))" -s \
+-f "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.markdupstats \
 -T "$WD"/temp/ \
 - \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
 
 # File removal
 rm -f \
-"$WD"/01_data_preparation/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam
+"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam
 
 exit 0
