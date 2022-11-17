@@ -7,7 +7,7 @@ RG=$2 # Reference genome
 SD=$3 # Species directory
 WD=$4 # Working directory
 sample=$5 # Sample directory
-script_path=$6 # Path to script location
+dataprep=$6 # Path to script location
 algo=$7 # Chosen algorithm
 
 R1=
@@ -23,7 +23,7 @@ for R2 in "$sample"/*.fq.gz ; do
         --adapter2 AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG \
         --minquality 25 \
         --minlength 20 \
-        --basename "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed \
+        --basename "$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed \
         --trimns \
         --trimqualities \
         --collapse
@@ -36,8 +36,8 @@ done
 
 # File removal
 rm -f \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.discarded \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.settings \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.singleton.truncated
+"$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.discarded \
+"$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.settings \
+"$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.singleton.truncated
 
 exit 0

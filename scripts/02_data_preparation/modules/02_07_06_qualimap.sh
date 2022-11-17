@@ -7,7 +7,7 @@ RG=$2 # Reference genome
 SD=$3 # Species directory
 WD=$4 # Working directory
 sample=$5 # Sample directory
-script_path=$6 # Path to script location
+dataprep=$6 # Path to script location
 algo=$7 # Chosen algorithm
 
 # Change of JAVA_OPTS in qualimap script

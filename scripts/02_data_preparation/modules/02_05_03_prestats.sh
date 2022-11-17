@@ -7,12 +7,12 @@ RG=$2 # Reference genome
 SD=$3 # Species directory
 WD=$4 # Working directory
 sample=$5 # Sample directory
-script_path=$6 # Path to script location
+dataprep=$6 # Path to script location
 algo=$7 # Chosen algorithm
 
 # Creates coverage file for alignment
 samtools coverage \
--o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.coverage \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
+-o "$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.coverage \
+"$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
 
 exit 0
