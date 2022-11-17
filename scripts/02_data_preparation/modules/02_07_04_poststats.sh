@@ -12,10 +12,10 @@ algo=$7 # Chosen algorithm
 
 # Creates text file listing number of reads in markdup file on first line
 # number of reads in filtered file on second line and % remaining reads on the third line
-samtools view -@ "$(("$cpus" - 1))" -c \
+samtools view -@ "$((cpus - 1))" -c \
 "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
 > "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange && \
-samtools view -@ "$(("$cpus" - 1))" -c \
+samtools view -@ "$((cpus - 1))" -c \
 "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
 >> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_markdup_to_filtered.readchange && \
 awk \

@@ -11,7 +11,7 @@ script_path=$6 # Path to script location
 algo=$7 # Chosen algorithm
 
 # Creates flagstat file for alignment 
-samtools flagstat -@ "$(("$cpus" - 1))" \
+samtools flagstat -@ "$((cpus - 1))" \
 "$SD"/"$(basename "$sample")"/"$(basename "$sample")"_filtered.bam \
 > "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/post_filter_stats/"$(basename "$sample")"_filtered.flagstat
 

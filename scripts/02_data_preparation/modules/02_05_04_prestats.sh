@@ -11,7 +11,7 @@ script_path=$6 # Path to script location
 algo=$7 # Chosen algorithm
 
 # Creates stat file for alignment
-samtools stats -@ "$(("$cpus" - 1))" \
+samtools stats -@ "$((cpus - 1))" \
 -c 1,1000,1 \
 "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam \
 > "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.stats

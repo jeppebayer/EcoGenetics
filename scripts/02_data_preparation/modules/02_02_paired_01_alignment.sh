@@ -18,7 +18,7 @@ bwa "$algo" -t "$cpus" \
 | \
 
 # Sort with regards to QNAME and convert to bam format
-samtools sort -@ "$(("$cpus" - 1))" -n -O BAM \
+samtools sort -@ "$((cpus - 1))" -n -O BAM \
 -T "$WD"/temp/ \
 -o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
 -
