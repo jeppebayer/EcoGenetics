@@ -81,8 +81,6 @@ force_overwrite="N"
 # Name of data preparation directory
 dataprep="02_data_preparation"
 
-# ----------------- Error messages ---------------------------------------
-
 # Gets path to script
 # If run through sbatch or srun:
 if [ -n "$SLURM_JOB_ID" ]; then
@@ -92,62 +90,6 @@ else
     script_path=$(realpath "$0")
 fi
 
-# Error messages or different cases
-error_s()
-{
-cat << EOF
-
-ERROR: $OPTARG does not seem to be a directory
-
-If unsure of how to proceed run: $(basename "$script_path") -h
-
-EOF
-}
-
-error_d()
-{
-cat << EOF
-
-ERROR: $OPTARG does not seem to be a directory
-
-If unsure of how to proceed run: $(basename "$script_path") -h
-
-EOF
-}
-
-error_a()
-{
-cat << EOF
-
-ERROR: -a must be either 'mem' [default] or 'aln'
-
-If unsure of how to proceed run: $(basename "$script_path") -h
-
-EOF
-}
-
-error_m()
-{
-cat << EOF
-
-ERROR: -m must be a whole integer, 8 [default]'
-
-If unsure of how to proceed run: $(basename "$script_path") -h
-
-EOF
-}
-
-error_c()
-{
-cat << EOF
-
-ERROR: -c must be a whole integer, 8 [default]'
-
-If unsure of how to proceed run: $(basename "$script_path") -h
-
-EOF
-}
-
 # ----------------- Script Flag Processing -------------------------------
 
 while getopts 's:d:a:m:c:fh' OPTION; do
@@ -156,7 +98,7 @@ while getopts 's:d:a:m:c:fh' OPTION; do
             if [ -d "$OPTARG" ]; then
                 SD="$(readlink -f "$OPTARG")"
             else
-                error_s
+                echo -e "\nERROR: $OPTARG does not seem to be a directory\n\nIf unsure of how to proceed run: $(basename "$script_path") -h\n"
                 exit 1
             fi
             ;;
@@ -167,7 +109,7 @@ while getopts 's:d:a:m:c:fh' OPTION; do
             if [[ $OPTARG == "mem" ]] || [[ $OPTARG == "aln" ]]; then
                 algo="$OPTARG"
             else
-                error_a
+                echo -e "\nERROR: -a must be either 'mem' [default] or 'aln'\n\nIf unsure of how to proceed run: $(basename "$script_path") -h\n"
                 exit 1
             fi
             ;;
@@ -175,7 +117,7 @@ while getopts 's:d:a:m:c:fh' OPTION; do
             if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
                 memory="$OPTARG"
             else
-                error_m
+                echo -e "\nERROR: -m must be a whole integer, 8 [default]'\n\nIf unsure of how to proceed run: $(basename "$script_path") -h\n"
                 exit 1
             fi
             ;;
@@ -183,7 +125,7 @@ while getopts 's:d:a:m:c:fh' OPTION; do
             if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
                 cpus="$OPTARG"
             else
-                error_c
+                echo -e "\nERROR: -c must be a whole integer, 8 [default]'\n\nIf unsure of how to proceed run: $(basename "$script_path") -h\n"
                 exit 1
             fi
             ;;
@@ -227,7 +169,7 @@ script_path=$(dirname "$script_path")
 # Finds references genome for designated species or exits if it cannot be found
 for ref in /home/"$USER"/EcoGenetics/BACKUP/reference_genomes/"$(basename "$SD")"/*.fna; do
     if [ ! -e "$ref" ]; then
-        echo "Cannot locate reference genome, $ref"
+        echo -e "\nCannot locate reference genome, $ref\n"
         exit 1
     else
         RG=$ref
@@ -238,7 +180,7 @@ done
 # Exit with error message if reference genome is not indexed
 for index in "$(dirname "$RG")"/*.ann; do
     if [ ! -e "$index" ]; then
-        echo "Designated reference genome does not seem to be indexed, $RG"
+        echo -e "\nDesignated reference genome does not seem to be indexed, $RG\n"
         exit 1
     fi
 done
