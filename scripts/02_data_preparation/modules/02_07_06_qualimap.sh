@@ -10,7 +10,9 @@ sample=$5 # Sample directory
 script_path=$6 # Path to script location
 algo=$7 # Chosen algorithm
 
-export DISPLAY=:0
+# Change of JAVA_OPTS in qualimap script
+qualimap_path=$(dirname "$(which python)")/qualimap
+grep -qxF '\tjava_options="-Djava.awt.headless=true -Xmx$JAVA_MEM_SIZE"' "$qualimap_path" || sed -i '47s#.*#\tjava_options="-Djava.awt.headless=true -Xmx$JAVA_MEM_SIZE"#' "$qualimap_path"
 
 # First checks whether a .gff file for the reference genome is available
 for file in "$(dirname "$RG")"/*.gff; do
