@@ -303,6 +303,17 @@ When current running version of 02_data_preparation is done running:
 - Change folder for final .bam file to be the population_genetics folder for the sample - same for the associated .bai file.
 - Package all scripts relating to 02_data_preparation, with the exception of the init script, to be in a single folder called "core" or "modules" or something of the sort
 
+### **17/11-2022**
+
+Data preparation master script has been completed.  
+Working on small overhaul to script 01 for indexing reference genomes.  
+Working on script 03 to create initial analysis files for all population genetics samples. For every sample there is to be a pileup, VCF, SFS-complete, SFS-intergenic and SFS-nonsyn file. All are to be placed in the corresponding sample folder.  
+Looking into the use of cactus for multiple sequence alignment. I have gotten a workflow from Jilong.  
+Looking into genome assembly and annotation. I have gotten workflow files from Jilong.  
+
+Need to do some general housekeeping and reorganization of files.  
+Also have some pictures data need to made to schematics and need new illustrations for some proccesses.
+
 ---
 
 ## **JOBS**

@@ -30,21 +30,26 @@ cat << EOF
 
 Usage: 02_initialize_data_prep.sh [PARAMETERS] [OPTIONS]
 
-This script is used for initializing the standardized data preparation procedure for sequence data.
-Intended to be used in conjunction with 'sbatch', however it also be used in conjunction with 'srun' 
-or simply on the frontend as its resource-demands are fairly low.
+This script is used for initializing the standardized data preparation procedure
+for sequence data at the Center for EcoGenetics.
+Can be run on the frontend, as its resource-demands are fairly, or run in 
+conjunction with 'sbatch'or 'srun'.
 
-If the specified species sample directory is within the 'museomics' directory, the script will 
-automatically try to detect whether the sample directory is contemporary or historical 
-and automatically apply the corresponding algorithm. This means that if your samples are in the 
-museomics directory you do not need to specify an algorithm.
+If the specified species sample directory is within the 'museomics' directory,
+the script will automatically try to detect whether the sample directory is
+contemporary or historical and automatically apply the corresponding algorithm.
+This means that if your samples are in the museomics directory you do not need
+to specify an algorithm.
 
 PARAMETERS (must be assigned):
     -s  DIRECTORY       Species specific sample directory
 
 OPTIONS:
-    -d  DIRECTORY       Working directory. If not assigned, will use current working directory [default]
-    -a  ALGORITHM       Choice of algorithm to be used during alignment. 'mem' (>70MB, contemporary samples)[default] or 'aln' (<70MB, historic samples)
+    -d  DIRECTORY       Working directory. If not assigned, will use current 
+                        working directory [default]
+    -a  ALGORITHM       Choice of algorithm to be used during alignment.
+                        'mem' (>70MB, contemporary samples)[default] or 
+                        'aln' (<70MB, historic samples)
     -m  INTEGER         Amount of memory to be used by each CPU. 8 [default]
     -c  INTEGER         Number of CPUs to be used. 8 [default]
     -f                  Force run even if target sample directory contains .bam
@@ -53,7 +58,8 @@ OPTIONS:
 Parameters can also be set directly in the script. 
 If you decide to do so, change the variables under CONFIGURATION.
 
-Tested and working using 'EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml'
+Tested and working using:
+'EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml'
 
 EOF
 }
