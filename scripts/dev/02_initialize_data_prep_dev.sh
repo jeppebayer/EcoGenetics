@@ -470,7 +470,7 @@ for sample in "$SD"/*; do
                                 done
 
                                 # Change requested time on nodes depending on filesize comparative to R1 Ocin_NYS-F
-                                adjustment=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 93635424798 + 0.1) }')
+                                adjustment=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 93635424798 ) }')
                                 
                                 sampledir="$speciesdir"/"$(basename "$sample")"
 

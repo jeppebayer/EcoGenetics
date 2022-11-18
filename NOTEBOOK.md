@@ -314,6 +314,10 @@ Looking into genome assembly and annotation. I have gotten workflow files from J
 Need to do some general housekeeping and reorganization of files.  
 Also have some pictures data need to made to schematics and need new illustrations for some proccesses.
 
+### **18/11-2022**
+
+Reduced datapreparation master script to a third of the size. Most likely also reducing computation time marginally.
+
 ---
 
 ## **JOBS**
