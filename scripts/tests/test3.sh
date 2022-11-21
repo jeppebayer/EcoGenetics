@@ -29,18 +29,9 @@ adjustment=0.1
 
 # echo "$line"
 
-timer()
-{
-        awk -v adjustment="$1" -v base="$2" -v static="$3" 'BEGIN { print int( base * adjustment + static) }'
-}
+mapfile -t id < <(squeue -u "$USER" -S -V -o %A-%V)
 
-# dingle=timer 1 720 120
+echo "${id[1]}"
 
-# dingle2="$(timer 1 720 120)"
-
-echo "$(timer 1 720 120)"
-
-echo "dingle=timer 1 720 120"
-echo "dingle2=$(timer 1 720 120)"
 
 exit 0

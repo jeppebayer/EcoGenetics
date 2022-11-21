@@ -11,7 +11,8 @@ dataprep=$6 # Path to script location
 algo=$7 # Chosen algorithm
 
 # Align sample to reference genome
-bwa "$algo" -R -t "$cpus" \
+bwa "$algo" -t "$cpus" \
+-R "@RG\tID:$(basename "$sample")\tSM:$(basename "$sample")" \
 "${RG%.*}" \
 "$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
 "$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated \

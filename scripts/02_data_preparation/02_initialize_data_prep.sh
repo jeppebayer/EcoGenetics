@@ -15,12 +15,12 @@
 # 
 # For troubleshooting or questions:
 # Email: jeppe.bayer@bio.au.dk
-# ------------------------------------------------------------------------
 
 # ----------------- Description ------------------------------------------
 
 # Script for initializing data preparation procedure for sequence data
-# Tested and working using EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
+# Tested and working using:
+# EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
 
 # ----------------- Usage ------------------------------------------------
 
