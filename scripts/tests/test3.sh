@@ -29,9 +29,20 @@ adjustment=0.1
 
 # echo "$line"
 
-mapfile -t id < <(squeue -u "$USER" -S -V -o %A-%V)
+# mapfile -t id < <(squeue -u "$USER" -S -V -o %A-%V)
 
-echo "${id[1]}"
+# echo "${id[1]}"
 
+# parts=20
+
+# parts=$(awk -v p="$parts" 'BEGIN { print ( p - 1 ) }')
+
+# echo "$parts"
+
+SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F"
+
+SD=$(dirname "$SD")
+
+echo "$SD"
 
 exit 0

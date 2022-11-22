@@ -17,7 +17,7 @@ sample=$4
 # Make mpileup file
 samtools mpileup \
 -C 0 \
--o "$sample"/"$(basename "$sample")".mpileup \
+-o "$sample"/"$(basename "$sample")".pileup \
 -f "$RG" \
 "$sample"/"$(basename "$sample")"_filtered.bam
 

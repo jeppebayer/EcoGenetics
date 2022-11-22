@@ -52,7 +52,7 @@ OPTIONS:
 						'aln' (<70MB, historic samples)
     -m  INTEGER         Amount of memory to be used by each CPU. 8 [default]
     -c  INTEGER         Number of CPUs to be used. 8 [default]
-	-u					Run only on a single sample. -s then needs to lead to
+	-u					Run only on a single sample. -s then need to lead to
 						the specific sample
     -f                  Force run even if target sample directory contains .bam
     -h                  Show this message
@@ -175,7 +175,6 @@ if [[ -z $SD ]]; then
     exit 1
 fi
 
-# Single sample argument correction
 if [ $single_sample == "Y" ]; then
 	sample="$SD"
 	SD=$(dirname "$SD")
@@ -190,8 +189,8 @@ sample_processing()
 	if [ "$(ls -A "$sample")" ]; then
 		
 		# Checks whether a .bam file already exists within sample folder, indicating samples have already been processed        
-		for bam in "$sample"/*.bam; do
-			if [ ! -e "$bam" ] || [ "$force_overwrite" == "Y" ]; then
+		for file in "$sample"/*.bam; do
+			if [ ! -e "$file" ] || [ "$force_overwrite" == "Y" ]; then
 			
 				# Checks sample file size
 				filesize=
@@ -201,9 +200,10 @@ sample_processing()
 
 				# Change requested time on nodes depending on filesize comparative to R1 Ocin_NYS-F
 				adjustment=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 93635424798 + 0.1) }')
+					
+				sampledir="$speciesdir"/"$(basename "$sample")"
 
 				# Creates sample directory in species directory if none exist
-				sampledir="$speciesdir"/"$(basename "$sample")"
 				[[ -d "$sampledir" ]] || mkdir -m 775 "$sampledir"
 
 				# Creates pre- and post-filtering directory in sample directory if none exist
@@ -211,8 +211,7 @@ sample_processing()
 				[[ -d "$sampledir"/post_filter_stats ]] || mkdir -m 775 "$sampledir"/post_filter_stats
 
 				# Create folder for STDOUT files generated sbatch
-				stdoutput="$sampledir"/stdout_sbatch
-				[[ -d "$stdoutput" ]] || mkdir -m 775 "$stdoutput"
+				[[ -d "$sampledir"/stdout_sbatch ]] || mkdir -m 775 "$sampledir"/stdout_sbatch
 
 				# Checks if currently working with museomics samples
 				if [[ "$SD" == *"museomics"* ]]; then
@@ -224,7 +223,7 @@ sample_processing()
 						age=" modern"
 						algo="mem"
 				
-						queue
+						queue "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo" "$memory" "$adjustment" "$script_path" "$age"
 
 					else
 
@@ -232,7 +231,7 @@ sample_processing()
 						age=" historic"
 						algo="aln"
 
-						queue
+						queue "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo" "$memory" "$adjustment" "$script_path" "$age"
 				
 					fi
 
@@ -241,12 +240,12 @@ sample_processing()
 					# Sample is custom
 					age=""
 
-					queue
+					queue "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo" "$memory" "$adjustment" "$script_path" "$age"
 				fi
 
 			else
 
-				echo -e "$(basename "$sample") already contains a .bam file, $(basename "$bam"), and is skipped\n" >> "$logfile"
+				echo -e "$(basename "$sample") already contains a .bam file, $(basename "$file"), and is skipped\n" >> "$logfile"
 
 			fi
 
@@ -268,229 +267,234 @@ timer()
 # Function used to queue jobs
 queue()
 {
+	# Location of logfile
+	logfile="$4"/"$6"/"$(basename "$3")"/log_"$(basename "$3")"_"$(date +"%Y-%m-%d")".txt
+
+	stdoutput="$4"/"$6"/"$(basename "$3")"/"$(basename "$5")"/stdout_sbatch
+
 	# Check the number of .fq.gz files in sample directory (assumed to be indicative of whether sample is single- or paired-end)
-	count=$(find "$sample"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
+	count=$(find "$5"/ -maxdepth 1 -type f -name '*.fq.gz' | wc -l)
 	if [ "$count" == 1 ]; then
 			    
 		# Single-end
 
-		echo "$(basename "$sample") is sent to the queue as a single-end$age sample" >> "$logfile"
+		echo "$(basename "$5") is sent to the queue as a single-end$age sample" >> "$logfile"
 
 		# AdapterRemoval
 		jid1=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 720 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_01-%j.out \
-			"$script_path"/modules/02_01_single_adapterremoval.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			--time="$(timer "$9" 720 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_01-%j.out \
+			"${10}"/modules/02_01_single_adapterremoval.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 			    
-		echo -e "\t'AdapterRemoval' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$logfile"
+		echo -e "\t'AdapterRemoval' job has been submitted for $(basename "$5") -- Job ID: $jid1" >> "$logfile"
 
 		# Aligning to reference
 		jid2=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 1800 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_02-%j.out \
+			--time="$(timer "$9" 1800 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_02-%j.out \
 			--dependency=afterany:"$jid1" \
-			"$script_path"/modules/02_02_single_alignment.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			"${10}"/modules/02_02_single_alignment.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 
-		echo -e "\t'Alignment' job has been submitted for $(basename "$sample") -- Job ID: $jid2" >> "$logfile"
+		echo -e "\t'Alignment' job has been submitted for $(basename "$5") -- Job ID: $jid2" >> "$logfile"
 
 		# Marking duplicates
 		jid4=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 1800 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_04-%j.out \
+			--time="$(timer "$9" 1800 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_04-%j.out \
 			--dependency=afterany:"$jid2" \
-			"$script_path"/modules/02_04_markduplicates.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			"${10}"/modules/02_04_markduplicates.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 
-		echo -e "\t'Marking duplicates' job has been submitted for $(basename "$sample") -- Job ID: $jid4" >> "$logfile"
+		echo -e "\t'Marking duplicates' job has been submitted for $(basename "$5") -- Job ID: $jid4" >> "$logfile"
 			
 	else
 
 		# Paired-end
 			    
-		echo "$(basename "$sample") is sent to the queue as a pair-end$age sample" >> "$logfile"
+		echo "$(basename "$5") is sent to the queue as a pair-end$age sample" >> "$logfile"
 
 		# AdapterRemoval
 		jid1=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 720 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_01-%j.out \
-			"$script_path"/modules/02_01_paired_adapterremoval.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			--time="$(timer "$9" 720 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_01-%j.out \
+			"${10}"/modules/02_01_paired_adapterremoval.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 			    
-		echo -e "\t'AdapterRemoval' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$logfile"
+		echo -e "\t'AdapterRemoval' job has been submitted for $(basename "$5") -- Job ID: $jid1" >> "$logfile"
 
 		# Aligning to reference
 		jid2_1=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 1800 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_02_01-%j.out \
+			--time="$(timer "$9" 1800 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_02_01-%j.out \
 			--dependency=afterany:"$jid1" \
-			"$script_path"/modules/02_02_paired_01_alignment.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			"${10}"/modules/02_02_paired_01_alignment.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 		jid2_2=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 1800 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_02_02-%j.out \
+			--time="$(timer "$9" 1800 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_02_02-%j.out \
 			--dependency=afterany:"$jid1" \
-			"$script_path"/modules/02_02_paired_02_alignment.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			"${10}"/modules/02_02_paired_02_alignment.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 
-		echo -e "\t'Alignment of paired ends' job has been submitted for $(basename "$sample") -- Job ID: $jid2_1" >> "$logfile"
-		echo -e "\t'Alignment of collapsed single end' job has been submitted for $(basename "$sample") -- Job ID: $jid2_2" >> "$logfile"
+		echo -e "\t'Alignment of paired ends' job has been submitted for $(basename "$5") -- Job ID: $jid2_1" >> "$logfile"
+		echo -e "\t'Alignment of collapsed single end' job has been submitted for $(basename "$5") -- Job ID: $jid2_2" >> "$logfile"
 
 		# Merging of alignment files
 		jid3=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 1200 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_03-%j.out \
+			--time="$(timer "$9" 1200 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_03-%j.out \
 			--dependency=afterany:"$jid2_1":"$jid2_2" \
-			"$script_path"/modules/02_03_paired_merge.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			"${10}"/modules/02_03_paired_merge.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 
-		echo -e "\t'Merging' job has been submitted for $(basename "$sample") -- Job ID: $jid3" >> "$logfile"
+		echo -e "\t'Merging' job has been submitted for $(basename "$5") -- Job ID: $jid3" >> "$logfile"
 
 		# Marking duplicates
 		jid4=$(sbatch \
 			--parsable \
-			--time="$(timer "$adjustment" 1800 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_04-%j.out \
+			--time="$(timer "$9" 1800 120)" \
+			--mem-per-cpu="$8"G \
+			--cpus-per-task="$1" \
+			--output="$stdoutput"/"$(basename "$5")"_04-%j.out \
 			--dependency=afterany:"$jid3" \
-			"$script_path"/modules/02_04_markduplicates.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+			"${10}"/modules/02_04_markduplicates.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 			    
-		echo -e "\t'Marking duplicates' job has been submitted for $(basename "$sample") -- Job ID: $jid4" >> "$logfile"
+		echo -e "\t'Marking duplicates' job has been submitted for $(basename "$5") -- Job ID: $jid4" >> "$logfile"
 
 	fi
 			
 	# Statistics pre-filtering
 	jid5_1=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 60 60)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_05_01-%j.out \
+		--time="$(timer "$9" 60 60)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_05_01-%j.out \
 		--dependency=afterany:"$jid4" \
-		"$script_path"/modules/02_05_01_prestats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_05_01_prestats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid5_2=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 60 60)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_05_02-%j.out \
+		--time="$(timer "$9" 60 60)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_05_02-%j.out \
 		--dependency=afterany:"$jid4" \
-		"$script_path"/modules/02_05_02_prestats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_05_02_prestats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid5_3=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 360 120)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_05_03-%j.out \
+		--time="$(timer "$9" 360 120)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_05_03-%j.out \
 		--dependency=afterany:"$jid4" \
-		"$script_path"/modules/02_05_03_prestats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_05_03_prestats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid5_4=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 60 60)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_05_04-%j.out \
+		--time="$(timer "$9" 60 60)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_05_04-%j.out \
 		--dependency=afterany:"$jid4" \
-		"$script_path"/modules/02_05_04_prestats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_05_04_prestats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 			
-	echo -e "\t'Pre-filtering statistics (idxstats)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_1" >> "$logfile"
-	echo -e "\t'Pre-filtering statistics (flagstat)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_2" >> "$logfile"
-	echo -e "\t'Pre-filtering statistics (coverage)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_3" >> "$logfile"
-	echo -e "\t'Pre-filtering statistics (stats)' job has been submitted for $(basename "$sample") -- Job ID: $jid5_4" >> "$logfile"
+	echo -e "\t'Pre-filtering statistics (idxstats)' job has been submitted for $(basename "$5") -- Job ID: $jid5_1" >> "$logfile"
+	echo -e "\t'Pre-filtering statistics (flagstat)' job has been submitted for $(basename "$5") -- Job ID: $jid5_2" >> "$logfile"
+	echo -e "\t'Pre-filtering statistics (coverage)' job has been submitted for $(basename "$5") -- Job ID: $jid5_3" >> "$logfile"
+	echo -e "\t'Pre-filtering statistics (stats)' job has been submitted for $(basename "$5") -- Job ID: $jid5_4" >> "$logfile"
 
 
 	# Removal of duplicates, unmapped reads and low quality mappings
 	jid6=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 1440 120)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_06-%j.out \
+		--time="$(timer "$9" 1440 120)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_06-%j.out \
 		--dependency=afterany:"$jid5_1":"$jid5_2":"$jid5_3":"$jid5_4" \
-		"$script_path"/modules/02_06_filtering.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_06_filtering.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 
-	echo -e "\t'Filtering' job has been submitted for $(basename "$sample") -- Job ID: $jid6" >> "$logfile"
+	echo -e "\t'Filtering' job has been submitted for $(basename "$5") -- Job ID: $jid6" >> "$logfile"
 
 	# Statistics post-filtering
 	jid7_1=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 60 60)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_07_01-%j.out \
+		--time="$(timer "$9" 60 60)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_07_01-%j.out \
 		--dependency=afterany:"$jid6" \
-		"$script_path"/modules/02_07_01_poststats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_07_01_poststats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid7_2=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 60 60)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_07_02-%j.out \
+		--time="$(timer "$9" 60 60)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_07_02-%j.out \
 		--dependency=afterany:"$jid6" \
-		"$script_path"/modules/02_07_02_poststats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_07_02_poststats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid7_3=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 360 120)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_07_03-%j.out \
+		--time="$(timer "$9" 360 120)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_07_03-%j.out \
 		--dependency=afterany:"$jid6" \
-		"$script_path"/modules/02_07_03_poststats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_07_03_poststats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid7_4=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 360 120)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_07_04-%j.out \
+		--time="$(timer "$9" 360 120)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_07_04-%j.out \
 		--dependency=afterany:"$jid6" \
-		"$script_path"/modules/02_07_04_poststats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_07_04_poststats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid7_5=$(sbatch \
 		--parsable \
-		--time="$(timer "$adjustment" 60 60)" \
-		--mem-per-cpu="$memory"G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_07_05-%j.out \
+		--time="$(timer "$9" 60 60)" \
+		--mem-per-cpu="$8"G \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_07_05-%j.out \
 		--dependency=afterany:"$jid6" \
-		"$script_path"/modules/02_07_05_poststats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_07_05_poststats.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 	jid7_6=$(sbatch \
 		--parsable \
-		--exclude=s21n64 \
-		--time="$(timer "$adjustment" 240 120)" \
+		--exlude=s21n64 \
+		--time="$(timer "$9" 240 120)" \
 		--mem-per-cpu=20G \
-		--cpus-per-task="$cpus" \
-		--output="$stdoutput"/"$(basename "$sample")"_07_06-%j.out \
+		--cpus-per-task="$1" \
+		--output="$stdoutput"/"$(basename "$5")"_07_06-%j.out \
 		--dependency=afterany:"$jid6" \
-		"$script_path"/modules/02_07_06_qualimap.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+		"${10}"/modules/02_07_06_qualimap.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7")
 
-	echo -e "\t'Post-filtering statistics (flagstat)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_1" >> "$logfile"
-	echo -e "\t'Post-filtering statistics (idxstats)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_2" >> "$logfile"
-	echo -e "\t'Post-filtering statistics (coverage)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_3" >> "$logfile"
-	echo -e "\t'Post-filtering statistics (readchange)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_4" >> "$logfile"
-	echo -e "\t'Post-filtering statistics (stats)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_5" >> "$logfile"
-	echo -e "\t'Post-filtering statistics (qualimap)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_6\n" >> "$logfile"
+	echo -e "\t'Post-filtering statistics (flagstat)' job has been submitted for $(basename "$5") -- Job ID: $jid7_1" >> "$logfile"
+	echo -e "\t'Post-filtering statistics (idxstats)' job has been submitted for $(basename "$5") -- Job ID: $jid7_2" >> "$logfile"
+	echo -e "\t'Post-filtering statistics (coverage)' job has been submitted for $(basename "$5") -- Job ID: $jid7_3" >> "$logfile"
+	echo -e "\t'Post-filtering statistics (readchange)' job has been submitted for $(basename "$5") -- Job ID: $jid7_4" >> "$logfile"
+	echo -e "\t'Post-filtering statistics (stats)' job has been submitted for $(basename "$5") -- Job ID: $jid7_5" >> "$logfile"
+	echo -e "\t'Post-filtering statistics (qualimap)' job has been submitted for $(basename "$5") -- Job ID: $jid7_6\n" >> "$logfile"
 
 	# Clean up of empty stdout files
 	sbatch \
 		--output=/dev/null \
 		--error=/dev/null \
 		--dependency=afterany:"$jid7_1":"$jid7_2":"$jid7_3":"$jid7_4":"$jid7_5":"$jid7_6" \
-		"$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo"
+		"${10}"/modules/02_08_cleanup.sh "$1" "$2" "$3" "$4" "$5" "$6" "$7"
 }
 
 # ----------------- Script Queue -----------------------------------------
@@ -542,21 +546,85 @@ done
 # Checks whether or not to run on single sample
 if [ "$single_sample" == "N" ]; then
 
-	# Multiple samples
-
 	# Loops through all sample folders within species specific sample directory
 	for sample in "$SD"/*; do
 
-		sample_processing
+		# Checks if sample folder is empty
+		if [ "$(ls -A "$sample")" ]; then
 		
+			# Checks whether a .bam file already exists within sample folder, indicating samples have already been processed        
+			for file in "$sample"/*.bam; do
+				if [ ! -e "$file" ] || [ "$force_overwrite" == "Y" ]; then
+			
+					# Checks sample file size
+					filesize=
+					for fna in "$sample"/*.fq.gz; do
+						[ ! "$filesize" ] && filesize=$(wc -c < "$fna") && break
+					done
+
+					# Change requested time on nodes depending on filesize comparative to R1 Ocin_NYS-F
+					adjustment=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 93635424798 + 0.1) }')
+					
+					sampledir="$speciesdir"/"$(basename "$sample")"
+
+					# Creates sample directory in species directory if none exist
+					[[ -d "$sampledir" ]] || mkdir -m 775 "$sampledir"
+
+					# Creates pre- and post-filtering directory in sample directory if none exist
+					[[ -d "$sampledir"/pre_filter_stats ]] || mkdir -m 775 "$sampledir"/pre_filter_stats
+					[[ -d "$sampledir"/post_filter_stats ]] || mkdir -m 775 "$sampledir"/post_filter_stats
+
+					# Create folder for STDOUT files generated sbatch
+					[[ -d "$sampledir"/stdout_sbatch ]] || mkdir -m 775 "$sampledir"/stdout_sbatch
+
+					# Checks if currently working with museomics samples
+					if [[ "$SD" == *"museomics"* ]]; then
+
+						# Checks if sample directory is pre-2000 (historic) or post-2000 (modern) and sets the algrorithm parameter correspondingly
+						if [ "$((${sample: -4}))" -gt 2000 ]; then
+
+							# Sample is modern
+							age=" modern"
+							algo="mem"
+				
+							queue "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo" "$memory" "$adjustment" "$script_path" "$age"
+
+						else
+
+							# Sample is historic
+							age=" historic"
+							algo="aln"
+
+							queue "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo" "$memory" "$adjustment" "$script_path" "$age"
+				
+						fi
+
+					else
+
+						# Sample is custom
+						age=""
+
+						queue "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo" "$memory" "$adjustment" "$script_path" "$age"
+					fi
+
+				else
+
+					echo -e "$(basename "$sample") already contains a .bam file, $(basename "$file"), and is skipped\n" >> "$logfile"
+
+				fi
+
+			done
+
+		else
+
+			echo -e "$(basename "$sample") is an empty directory and is skipped\n" >> "$logfile"
+
+		fi
+
 	done
 
 else
 
-	# Single sample
-	sample_processing
-
-fi
 
 echo -e "\nLog file can be found here: $logfile\n"
 
