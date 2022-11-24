@@ -39,10 +39,32 @@ adjustment=0.1
 
 # echo "$parts"
 
-SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F"
+# last=$(tail -n 2 /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test2.sh); last="${last%%$'\n'*}"
 
-SD=$(dirname "$SD")
+# errorfile=AgUr_01_J_2022_07_06-10434619
 
-echo "$SD"
+# id=${errorfile##*_*_*-}; id=${id%%.out}
+
+# echo "$id"
+
+# errorfile=Ocin_NYS-F_2022_07_06-10434619
+
+# id=${errorfile#*_*_*-}
+# id=${id%%.out}
+
+# echo "$id"
+
+WD=/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps
+
+sample=/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/NYS-F_C25
+
+R1_1=
+for R1_2 in "$sample"/*_1.fq.gz ; do
+    if [ "$R1_1" ]; then
+        cat "$R1_1" "$R1_2" > "$WD"/temp/"$(basename "$sample")"_R1.fq.gz
+    else
+        R1_1=$R1_2
+    fi
+done
 
 exit 0

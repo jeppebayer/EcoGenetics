@@ -2,16 +2,13 @@
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
 
-# Reference genome
-RG=$1
+cpus=$1 # Number of CPUs
+RG=$2 # Reference genome
+SD=$3 # Species directory
+WD=$4 # Working directory
+sample=$5 # Sample directory
+dataprep=$6 # Path to script location
 
-# Species directory
-SD=$2
 
-# Working directory
-WD=$3
-
-# Sample directory
-sample=$4
 
 exit 0

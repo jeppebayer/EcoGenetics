@@ -21,4 +21,6 @@ dependencies:
   - polydfe
   - adapterremoval
   - qualimap
+  - bioawk
+  - bedtools
 prefix: /home/jepe/miniconda3/envs/ecogen_primary

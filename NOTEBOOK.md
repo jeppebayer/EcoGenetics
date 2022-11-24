@@ -22,6 +22,58 @@
 
 ## **TO-DO**
 
+### For Museomics
+
+Call VCF
+
+```bash
+freebayes  -f  reference.fa -L bamlist.txt> popname.vcf
+```
+
+filter to keep a minimum of 10x per genotype, no indels and no missing gentypes
+
+```bash
+vcftools --vcf AgUr_2022_J.vcf --recode --out name_DP10_noMISSING_noINDELS --minDP 10 --max-missing-count 0 --remove-indels
+```
+
+VCF -> SFS
+
+```bash
+conda install -c jaredgk -c bioconda py-popgen
+```
+
+Model-file
+
+```bash
+model_creator.py --model 1Pop --model-pop 1Pop name --pop-ind-file name name.txt
+```
+
+name.txt
+  
+- ind1  
+- ind2  
+- ind3  
+- indn
+
+BED-file  
+GFF to BED
+
+```bash
+grep 'gene' gff_file > gff_file_gene
+
+awk '{print $1, $4, $5}' gff_file_gene > gene.bed
+
+bioawk  -v OFS='\t' -c fastx '{ print $name, length($seq) }' < sequences.fa > genome.txt
+
+sort -k1,1 -k2,2n < gene.bed > gene_sorted.bed
+
+sort -k1,1 -k2,2n < genome.txt > genome_sorted.txt
+
+bedtools complement -i gene_sorted.bed -g genome_sorted.txt > intergenic.bed
+
+vcf_to_sfs.py --vcf name_final_.recode.vcf --model-file out.model --modelname 1Pop  --folded --out name_sfs.txt
+```
+
 ### Fra gff til intergene.bed som indeholder neutrale/intergene positioner
 
 grep 'gene' gff_file > gff_file_gene
@@ -317,6 +369,19 @@ Also have some pictures data need to made to schematics and need new illustratio
 ### **18/11-2022**
 
 Reduced datapreparation master script to a third of the size. Most likely also reducing computation time marginally.
+
+### **24/11-2022**
+
+Update on work:  
+Data preparation master script has been completed.  
+Working on small overhaul to script 01 for indexing reference genomes.  
+Working on script 03 to create initial analysis files for all population genetics samples. For every sample there is to be a pileup, VCF, SFS-complete, SFS-intergenic and SFS-nonsyn file. All are to be placed in the corresponding sample folder.  
+Looking into the use of cactus for multiple sequence alignment. I have gotten a workflow from Jilong.  
+Looking into genome assembly and annotation. I have gotten workflow files from Jilong.  
+--- For the museomics samples need to collect all samples within each species into one VCF file
+
+Need to do some general housekeeping and reorganization of files.  
+Also have some pictures data need to made to schematics and need new illustrations for some proccesses.
 
 ---
 

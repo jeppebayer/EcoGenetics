@@ -11,6 +11,8 @@ dependencies:
   - adapterremoval=2.3.3=pl5321h19e8d03_0
   - alsa-lib=1.2.7.2=h166bdaf_0
   - bcftools=1.15.1=hfe4b78e_1
+  - bedtools=2.30.0=h468198e_3
+  - bioawk=1.0=h7132678_7
   - bwa=0.7.17=h7132678_9
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0

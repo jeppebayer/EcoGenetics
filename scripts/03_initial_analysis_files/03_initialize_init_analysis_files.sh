@@ -255,7 +255,7 @@ queue()
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_01-%j.out \
-            "$script_path"/modules/03_01_mpileup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+            "$script_path"/modules/03_01_mpileup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
                             
     echo -e "\t'Mpileup' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$logfile"
 
@@ -267,7 +267,7 @@ queue()
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_02-%j.out \
             --dependency=afterany:"$jid1" \
-            "$script_path"/modules/03_02_vcf.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+            "$script_path"/modules/03_02_vcf.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'VCF' job has been submitted for $(basename "$sample") -- Job ID: $jid2" >> "$logfile"
 
@@ -279,7 +279,7 @@ queue()
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_03-%j.out \
             --dependency=afterany:"$jid1" \
-            "$script_path"/modules/03_03_split.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+            "$script_path"/modules/03_03_split.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'File Split' job has been submitted for $(basename "$sample") -- Job ID: $jid3" >> "$logfile"
 
@@ -292,7 +292,7 @@ queue()
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_04_01-%j.out \
         --dependency=afterany:"$jid3" \
-        "$script_path"/modules/03_04_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+        "$script_path"/modules/03_04_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'Site Frequency Spectrum - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid4_1" >> "$logfile"
 
@@ -304,7 +304,7 @@ queue()
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_04_02-%j.out \
         --dependency=afterany:"$jid4_1" \
-        "$script_path"/modules/03_04_02_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+        "$script_path"/modules/03_04_02_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'Merge Site Frequency Spectrum - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid4_2" >> "$logfile"
 
@@ -318,7 +318,7 @@ queue()
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_05_01-%j.out \
         --dependency=afterany:"$jid3" \
-        "$script_path"/modules/03_05_01_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+        "$script_path"/modules/03_05_01_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'Site Frequency Spectrum - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid5_1" >> "$logfile"
 
@@ -330,7 +330,7 @@ queue()
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_05_02-%j.out \
         --dependency=afterany:"$jid5_1" \
-        "$script_path"/modules/03_05_02_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+        "$script_path"/modules/03_05_02_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'Merge Site Frequency Spectrum - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid5_2" >> "$logfile"
 
@@ -343,7 +343,7 @@ queue()
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_06_01-%j.out \
         --dependency=afterany:"$jid3" \
-        "$script_path"/modules/03_06_01_sfs_nonsyn.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+        "$script_path"/modules/03_06_01_sfs_nonsyn.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'Site Frequency Spectrum - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid6_1" >> "$logfile"
 
@@ -355,7 +355,7 @@ queue()
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_06_02-%j.out \
         --dependency=afterany:"$jid6_1" \
-        "$script_path"/modules/03_06_02_sfs_nonsyn.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo") # ***Add actual arguments***
+        "$script_path"/modules/03_06_02_sfs_nonsyn.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
 
     echo -e "\t'Merge Site Frequency Spectrum - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid6_2" >> "$logfile"
 
@@ -366,7 +366,7 @@ queue()
             --output=/dev/null \
             --error=/dev/null \
             --dependency=afterany:"${id[1]}" \
-            "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo"
+            "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep"
 }
 
 # ----------------- Script Queue -----------------------------------------

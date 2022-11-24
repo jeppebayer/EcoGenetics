@@ -314,19 +314,36 @@ queue()
 	else
 
 		# Paired-end
-			    
+
 		echo "$(basename "$sample") is sent to the queue as a pair-end$age sample" >> "$logfile"
 
-		# AdapterRemoval
-		jid1=$(sbatch \
-			--parsable \
-			--time="$(timer "$adjustment" 720 120)" \
-			--mem-per-cpu="$memory"G \
-			--cpus-per-task="$cpus" \
-			--output="$stdoutput"/"$(basename "$sample")"_01-%j.out \
-			"$script_path"/modules/02_01_paired_adapterremoval.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
-			    
-		echo -e "\t'AdapterRemoval' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$logfile"
+		if [ "$count" == 2 ];then	    
+
+			# AdapterRemoval
+			jid1=$(sbatch \
+				--parsable \
+				--time="$(timer "$adjustment" 720 120)" \
+				--mem-per-cpu="$memory"G \
+				--cpus-per-task="$cpus" \
+				--output="$stdoutput"/"$(basename "$sample")"_01-%j.out \
+				"$script_path"/modules/02_01_paired_adapterremoval.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+					
+			echo -e "\t'AdapterRemoval' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$logfile"
+		
+		else
+
+			#AdapterRemoval
+			jid1=$(sbatch \
+				--parsable \
+				--time="$(timer "$adjustment" 720 150)" \
+				--mem-per-cpu="$memory"G \
+				--cpus-per-task="$cpus" \
+				--output="$stdoutput"/"$(basename "$sample")"_01-%j.out \
+				"$script_path"/modules/02_01_pairedseveral_adapterremoval.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
+					
+			echo -e "\t'AdapterRemoval' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$logfile"
+
+		fi
 
 		# Aligning to reference
 		jid2_1=$(sbatch \
@@ -470,7 +487,6 @@ queue()
 		"$script_path"/modules/02_07_05_poststats.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
 	jid7_6=$(sbatch \
 		--parsable \
-		--exclude=s21n64 \
 		--time="$(timer "$adjustment" 240 120)" \
 		--mem-per-cpu=20G \
 		--cpus-per-task="$cpus" \
