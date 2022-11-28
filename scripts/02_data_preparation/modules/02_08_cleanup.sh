@@ -28,7 +28,7 @@ logfile="$WD"/"$dataprep"/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"
 grep -qxF "!!!ATTENTION!!!" "$logfile" || echo "!!!ATTENTION!!!" >> "$logfile"
 
 for file in "$stdout_dir"/*; do
-    if grep -qi "ERROR" "$file" || grep -qi "EXCEPTION" "$file"; then
+    if grep -qi "ERROR" "$file" || grep -qi "EXCEPTION" "$file" || grep -qi "WARNING" "$file"; then
         grep -qxF "Possible error in $(basename "$sample")" || echo -e "\nPossible error in $(basename "$sample")" >> "$logfile"
         errorfile=$(basename "$file")
         id=${errorfile##*_*_*-}; id=${id%%.out}
