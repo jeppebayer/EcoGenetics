@@ -22,6 +22,10 @@
 
 ## **TO-DO**
 
+### Might be useful
+
+To polarize SNPs during the SFS estimation, we generated a genome consensus sequence for the okapi using ANGSD (flag -doFasta 1).
+
 ### For Museomics
 
 Call VCF

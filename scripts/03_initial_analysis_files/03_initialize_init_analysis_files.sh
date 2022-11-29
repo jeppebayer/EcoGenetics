@@ -22,6 +22,13 @@
 # Tested and working using:
 # EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
 
+# ----------------- Environment ------------------------------------------
+
+if [ "$USER" == "jepe" ]; then
+    source /home/"$USER"/.bashrc
+    source activate ecogen_primary
+fi
+
 # ----------------- Usage ------------------------------------------------
 
 usage()
@@ -41,6 +48,9 @@ PARAMETERS (must be assigned):
 OPTIONS:
     -d  DIRECTORY       Working directory. If not assigned, will use current 
                         working directory [default]
+    -a  TYPE            Choice of analysis files to create. 'full' = the entire genome,
+                        'intergene' = for intergenic regions, 'nonsyn' = for non-
+                        synonymous regions, 'all' for all of the above [default]
     -m  INTEGER         Amount of memory to be used by each CPU. 8 [default]
     -c  INTEGER         Number of CPUs to be used. 8 [default]
     -u                  Run only on a single sample. -s then needs to lead to
@@ -59,14 +69,17 @@ EOF
 
 # ----------------- Configuration ----------------------------------------
 
-# Species specific sample directory, abosolute path
+# Species specific sample directory
 SD=
 
 # Working directory, abosolute path
 WD="$(readlink -f "$PWD")"
 
+# Analysis files to create
+queuetype="all"
+
 # Number of parts to split pileup into
-parts="20"
+parts="100"
 
 # Define memory per cpu in G (must be integer)
 memory="8"
@@ -81,7 +94,7 @@ single_sample="N"
 force_overwrite="N"
 
 # Name of data directory
-dataprep="03_init_analysis_files"
+data="03_init_analysis_files"
 
 # Gets path to script
 # If run through sbatch or srun:
@@ -94,7 +107,7 @@ fi
 
 # ----------------- Script Flag Processing -------------------------------
 
-while getopts 's:d:p:m:c:ufh' OPTION; do
+while getopts 's:d:a:p:m:c:ufh' OPTION; do
     case "$OPTION" in
         s)
             if [ -d "$OPTARG" ]; then
@@ -106,6 +119,14 @@ while getopts 's:d:p:m:c:ufh' OPTION; do
             ;;
         d)
             WD="$(readlink -f "$OPTARG")"
+            ;;
+        a)
+            if [ "$OPTARG" == "all" ] || [ "$OPTARG" == "full" ]  || [ "$OPTARG" == "intergene" ] || [ "$OPTARG" == "nonsyn" ]; then
+                queuetype="$OPTARG"
+            else
+                echo -e "\nERROR: $OPTARG is not a recognized choice\n\nIf unsure of how to proceed run: $(basename "$script_path") -h\n"
+                exit 1
+            fi
             ;;
         p)
             if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
@@ -184,38 +205,53 @@ sample_processing()
 		for bam in "$sample"/*.bam; do
 			if [ -e "$bam" ]; then
 
-                # Checks whether directory contains .mpileup file, indicating that the sample has already been processed
-                for pileup in "$sample"/*.pileup; do
-                    if [ ! -e "$pileup" ] || [ "$force_overwrite" == "Y" ]; then
+                # # Checks sample file size
+                # filesize=
+                # for fna in "$sample"/*.fq.gz; do
+                # 	[ ! "$filesize" ] && filesize=$(wc -c < "$fna") && break
+                # done
 
-                        # # Checks sample file size
-                        # filesize=
-                        # for fna in "$sample"/*.fq.gz; do
-                        # 	[ ! "$filesize" ] && filesize=$(wc -c < "$fna") && break
-                        # done
+                # # Change requested time on nodes depending on filesize comparative to R1 Ocin_NYS-F
+                # adjustment=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 93635424798 + 0.1) }')
 
-                        # # Change requested time on nodes depending on filesize comparative to R1 Ocin_NYS-F
-                        # adjustment=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 93635424798 + 0.1) }')
+                # Creates sample directory in species directory if none exist
+                sampledir="$speciesdir"/"$(basename "$sample")"
+                [[ -d "$sampledir" ]] || mkdir -m 775 "$sampledir"
 
-                        # Creates sample directory in species directory if none exist
-                        sampledir="$speciesdir"/"$(basename "$sample")"
-                        [[ -d "$sampledir" ]] || mkdir -m 775 "$sampledir"
+                # Create folder for STDOUT files generated sbatch
+                stdoutput="$sampledir"/stdout_sbatch
+                [[ -d "$stdoutput" ]] || mkdir -m 775 "$stdoutput"
 
-                        # Create folder for STDOUT files generated sbatch
-                        stdoutput="$sampledir"/stdout_sbatch
-                        [[ -d "$stdoutput" ]] || mkdir -m 775 "$stdoutput"
+                # Queues jobs for samples
+                if [ "$queuetype" == "all" ]; then
 
-                        # Queues jobs for samples
+                    echo "Initial Analysis Files (All) for $(basename "$sample") is sent to the queue" >> "$logfile"
 
-                        queue
-                    
-                    else
+                    queue01
 
-                        echo -e "$(basename "$sample") already contains a .mpileup file, $(basename "$pileup"), and is skipped\n" >> "$logfile"
-                    
-                    fi
+                    queue02
 
-                done
+                    queue03
+                
+                elif [ "$queuetype" == "full" ]; then
+
+                    echo "Initial Analysis Files (Full) for $(basename "$sample") is sent to the queue" >> "$logfile"
+
+                    queue01
+
+                elif [ "$queuetype" == "intergene" ]; then
+
+                    echo "Initial Analysis Files (Intergenic) for $(basename "$sample") is sent to the queue" >> "$logfile"
+
+                    queue02
+                
+                elif [ "$queuetype" == "nonsyn" ]; then
+
+                    echo "Initial Analysis Files (Non-synonymous) for $(basename "$sample") is sent to the queue" >> "$logfile"
+
+                    queue03
+                
+                fi
 
 			else
 
@@ -238,135 +274,218 @@ timer()
     awk -v adjustment="$1" -v base="$2" -v static="$3" 'BEGIN { print int( base * adjustment + static) }'
 }
 
-# Function used to queue jobs
-queue()
+# Functions used to queue jobs
+queue01()
 {
-    # Location of logfile
-    logfile="$WD"/"$dataprep"/"$(basename "$SD")"/log_"$(basename "$SD")"_"$(date +"%Y-%m-%d")".txt
+    if [ ! -e "$sample"/"$(basename "$sample")".pileup ]; then
 
-    stdoutput="$WD"/"$dataprep"/"$(basename "$SD")"/"$(basename "$sample")"/stdout_sbatch
-
-    echo "Initial Analysis $(basename "$sample") is sent to the queue" >> "$logfile"
-
-    # Mpileup
-    jid1=$(sbatch \
+        # Create pileup
+        jid1_1=$(sbatch \
             --parsable \
             --time=1440 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
-            --output="$stdoutput"/"$(basename "$sample")"_01-%j.out \
-            "$script_path"/modules/03_01_mpileup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
-                            
-    echo -e "\t'Mpileup' job has been submitted for $(basename "$sample") -- Job ID: $jid1" >> "$logfile"
+            --output="$stdoutput"/"$(basename "$sample")"_01_01-%j.out \
+            "$script_path"/modules/03_01_01_full_pileup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
+                                
+        echo -e "\t'Pileup - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid1_1" >> "$logfile"
 
-    # VCF
-    jid2=$(sbatch \
+        # Split pileup
+        jid2_1=$(sbatch \
             --parsable \
             --time=1440 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
-            --output="$stdoutput"/"$(basename "$sample")"_02-%j.out \
-            --dependency=afterany:"$jid1" \
-            "$script_path"/modules/03_02_vcf.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
+            --output="$stdoutput"/"$(basename "$sample")"_02_01-%j.out \
+            --dependency=afterany:"$jid1_1" \
+            "$script_path"/modules/03_02_01_split_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
 
-    echo -e "\t'VCF' job has been submitted for $(basename "$sample") -- Job ID: $jid2" >> "$logfile"
+        echo -e "\t'Split Pileup - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid2_1" >> "$logfile"
+    
+    else
 
-    # Split file
-    jid3=$(sbatch \
+        # Split pileup
+        jid2_1=$(sbatch \
             --parsable \
             --time=1440 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
-            --output="$stdoutput"/"$(basename "$sample")"_03-%j.out \
-            --dependency=afterany:"$jid1" \
-            "$script_path"/modules/03_03_split.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
+            --output="$stdoutput"/"$(basename "$sample")"_02_01-%j.out \
+            "$script_path"/modules/03_02_01_split_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
+        
+        echo -e "\tUsing existing full pileup file for $(basename "$sample")" >> "$logfile"
+        echo -e "\t'Split Pileup - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid2_1" >> "$logfile"
 
-    echo -e "\t'File Split' job has been submitted for $(basename "$sample") -- Job ID: $jid3" >> "$logfile"
+    fi
 
     # Full SFS array
-    jid4_1=$(sbatch \
+    jid3_1=$(sbatch \
         --parsable \
         --array=0-"$parts" \
+        --chdir="$WD"/temp \
         --time=1440 \
         --mem-per-cpu="$memory"G \
         --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_04_01-%j.out \
-        --dependency=afterany:"$jid3" \
-        "$script_path"/modules/03_04_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
+        --output="$stdoutput"/"$(basename "$sample")"_03_01-%j.out \
+        --dependency=afterany:"$jid2_1" \
+        "$script_path"/modules/03_03_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
 
-    echo -e "\t'Site Frequency Spectrum - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid4_1" >> "$logfile"
+    echo -e "\t'Site Ferquency Spectrum - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid3_1" >> "$logfile"
 
-    # Full SFS merge
-    jid4_2=$(sbatch \
-        --parsable \
-        --time=1440 \
-        --mem-per-cpu="$memory"G \
-        --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_04_02-%j.out \
-        --dependency=afterany:"$jid4_1" \
-        "$script_path"/modules/03_04_02_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
+    # Full SFS assembly
+    # jid4_1=$(sbatch \
+    #   --parsable \
+    #   --time=1440 \
+    #   --mem-per-cpu="$memory"G \
+    #   --cpus-per-task="$cpus" \
+    #   --output="$stdoutput"/"$(basename "$sample")"_04_01-%j.out \
+    #   --dependency=afterany:"$jid3_1" \
+    #   "$script_path"/modules/03_04_01_full_assemble.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
 
-    echo -e "\t'Merge Site Frequency Spectrum - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid4_2" >> "$logfile"
-
-
-    # Intergenic SFS array
-    jid5_1=$(sbatch \
-        --parsable \
-        --array=0-"$parts" \
-        --time=1440 \
-        --mem-per-cpu="$memory"G \
-        --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_05_01-%j.out \
-        --dependency=afterany:"$jid3" \
-        "$script_path"/modules/03_05_01_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
-
-    echo -e "\t'Site Frequency Spectrum - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid5_1" >> "$logfile"
-
-    # Intergenic SFS merge
-    jid5_2=$(sbatch \
-        --parsable \
-        --time=1440 \
-        --mem-per-cpu="$memory"G \
-        --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_05_02-%j.out \
-        --dependency=afterany:"$jid5_1" \
-        "$script_path"/modules/03_05_02_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
-
-    echo -e "\t'Merge Site Frequency Spectrum - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid5_2" >> "$logfile"
-
-    # Non-synonymous SFS array
-    jid6_1=$(sbatch \
-        --parsable \
-        --array=0-"$parts" \
-        --time=1440 \
-        --mem-per-cpu="$memory"G \
-        --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_06_01-%j.out \
-        --dependency=afterany:"$jid3" \
-        "$script_path"/modules/03_06_01_sfs_nonsyn.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
-
-    echo -e "\t'Site Frequency Spectrum - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid6_1" >> "$logfile"
-
-    # Non-synonymous SFS merge
-    jid6_2=$(sbatch \
-        --parsable \
-        --time=1440 \
-        --mem-per-cpu="$memory"G \
-        --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_06_02-%j.out \
-        --dependency=afterany:"$jid6_1" \
-        "$script_path"/modules/03_06_02_sfs_nonsyn.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep") # ***Add actual arguments***
-
-    echo -e "\t'Merge Site Frequency Spectrum - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid6_2" >> "$logfile"
-
-
+    # echo -e "\t'Site Frequency Spectrum Assembly - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid4_1\n" >> "$logfile"
 
     # Clean up of empty stdout files
-    sbatch \
-            --output=/dev/null \
-            --error=/dev/null \
-            --dependency=afterany:"${id[1]}" \
-            "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep"
+    # sbatch \
+    #   --output=/dev/null \
+    #   --error=/dev/null \
+    #   --dependency=afterany:"${id[1]}" \
+    #   "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data"
+}
+
+queue02()
+{
+    if [ ! -e "$sampledir"/"$(basename "$sample")"_intergenic.pileup ]; then
+        
+        # Create pileup
+        jid1_2=$(sbatch \
+            --parsable \
+            --time=1440 \
+            --mem-per-cpu="$memory"G \
+            --cpus-per-task="$cpus" \
+            --output="$stdoutput"/"$(basename "$sample")"_01_02-%j.out \
+            "$script_path"/modules/03_01_02_intergenic_pileup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+                                
+        echo -e "\t'Pileup - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid1_2" >> "$logfile"
+
+        # Split pileup
+        jid2_2=$(sbatch \
+            --parsable \
+            --time=1440 \
+            --mem-per-cpu="$memory"G \
+            --cpus-per-task="$cpus" \
+            --output="$stdoutput"/"$(basename "$sample")"_02_02-%j.out \
+            --dependency=afterany:"$jid1_2" \
+            "$script_path"/modules/03_02_02_split_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+        echo -e "\t'Split Pileup - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid2_2" >> "$logfile"
+
+    else
+
+        # Split pileup
+        jid2_2=$(sbatch \
+            --parsable \
+            --time=1440 \
+            --mem-per-cpu="$memory"G \
+            --cpus-per-task="$cpus" \
+            --output="$stdoutput"/"$(basename "$sample")"_02_02-%j.out \
+            "$script_path"/modules/03_02_02_split_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+        echo -e "\tUsing existing intergenic pileup file for $(basename "$sample")" >> "$logfile"
+        echo -e "\t'Split Pileup - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid2_2" >> "$logfile"
+    
+    fi
+
+    # SFS array
+    jid3_2=$(sbatch \
+        --parsable \
+        --array=0-"$parts" \
+        --chdir="$WD"/temp \
+        --time=1440 \
+        --mem-per-cpu="$memory"G \
+        --cpus-per-task="$cpus" \
+        --output="$stdoutput"/"$(basename "$sample")"_03_02-%j.out \
+        --dependency=afterany:"$jid2_2" \
+        "$script_path"/modules/03_03_02_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+    echo -e "\t'Site Ferquency Spectrum - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid3_2" >> "$logfile"
+
+    # SFS assembly
+    # jid4_2=$(sbatch \
+    #   --parsable \
+    #   --time=1440 \
+    #   --mem-per-cpu="$memory"G \
+    #   --cpus-per-task="$cpus" \
+    #   --output="$stdoutput"/"$(basename "$sample")"_04_02-%j.out \
+    #   --dependency=afterany:"$jid3_2" \
+    #   "$script_path"/modules/03_04_02_intergenic_assemble.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+    # echo -e "\t'Site Frequency Spectrum Assembly - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid4_2\n" >> "$logfile"
+
+    # Clean up of empty stdout files
+    # sbatch \
+    #   --output=/dev/null \
+    #   --error=/dev/null \
+    #   --dependency=afterany:"${id[1]}" \
+    #   "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data "$parts" "$script_path""
+}
+
+queue03()
+{
+    # Create pileup
+    jid1_3=$(sbatch \
+        --parsable \
+        --time=1440 \
+        --mem-per-cpu="$memory"G \
+        --cpus-per-task="$cpus" \
+        --output="$stdoutput"/"$(basename "$sample")"_01_03-%j.out \
+        "$script_path"/modules/03_01_03*****.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+                            
+    echo -e "\t'Pileup - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid1_3" >> "$logfile"
+
+    # Split pileup
+    jid2_3=$(sbatch \
+        --parsable \
+        --time=1440 \
+        --mem-per-cpu="$memory"G \
+        --cpus-per-task="$cpus" \
+        --output="$stdoutput"/"$(basename "$sample")"_02_03-%j.out \
+        --dependency=afterany:"$jid1_3" \
+        "$script_path"/modules/03_02_03*****.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+    echo -e "\t'Split Pileup - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid2_3" >> "$logfile"
+
+    #SFS array
+    jid3_3=$(sbatch \
+        --parsable \
+        --array=0-"$parts" \
+        --chdir="$WD"/temp \
+        --time=1440 \
+        --mem-per-cpu="$memory"G \
+        --cpus-per-task="$cpus" \
+        --output="$stdoutput"/"$(basename "$sample")"_03_03-%j.out \
+        --dependency=afterany:"$jid2_3" \
+        "$script_path"/modules/03_03_03*****.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+    echo -e "\t'Site Ferquency Spectrum - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid3_3" >> "$logfile"
+
+    # Full SFS assembly
+    jid4_3=$(sbatch \
+        --parsable \
+        --time=1440 \
+        --mem-per-cpu="$memory"G \
+        --cpus-per-task="$cpus" \
+        --output="$stdoutput"/"$(basename "$sample")"_04_03-%j.out \
+        --dependency=afterany:"$jid3_3" \
+        "$script_path"/modules/03_04_03*****.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+    echo -e "\t'Site Frequency Spectrum Assembly - Non-synonymous' job has been submitted for $(basename "$sample") -- Job ID: $jid4_3" >> "$logfile"
+
+    # Clean up of empty stdout files
+    # sbatch \
+    #   --output=/dev/null \
+    #   --error=/dev/null \
+    #   --dependency=afterany:"${id[1]}" \
+    #   "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data "$parts" "$script_path""
 }
 
 # ----------------- Script Queue -----------------------------------------
@@ -403,10 +522,10 @@ done
 [[ -d "$WD"/temp ]] || mkdir -m 775 "$WD"/temp
 
 # Creates data directory in working directory if none exist
-[[ -d "$WD"/"$dataprep" ]] || mkdir -m 775 "$WD"/"$dataprep"
+[[ -d "$WD"/"$data" ]] || mkdir -m 775 "$WD"/"$data"
 
 # Creates species directory in data directory if none exist
-speciesdir="$WD"/"$dataprep"/"$(basename "$SD")"
+speciesdir="$WD"/"$data"/"$(basename "$SD")"
 [[ -d "$speciesdir" ]] || mkdir -m 775 "$speciesdir"
 
 # Creates log file

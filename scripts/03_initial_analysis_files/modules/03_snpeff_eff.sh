@@ -13,6 +13,8 @@ SD=$3 # Species directory
 WD=$4 # Working directory
 sample=$5 # Sample directory
 data=$6 # Path to data location in WD
+n=$7 # Number of parts
+script_path=$8 # Path to script location
 
 RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna"
 sample="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F"

@@ -12,6 +12,8 @@ SD=$3 # Species directory
 WD=$4 # Working directory
 sample=$5 # Sample directory
 data=$6 # Path to data location in WD
+n=$7 # Number of parts
+script_path=$8 # Path to script location
 
 # Activates pool-hmm compatible conda environment
 source /home/"$USER"/.bashrc
@@ -24,7 +26,7 @@ WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
 # Funtion for the creation of SFS parts
 sfs()
 {
-    python /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/03_initial_analysis_files/modules/poolhmm_v1.4.4/pool-hmm.py \
+    python "$script_path"/modules/poolhmm_v1.4.4/pool-hmm.py \
     -f "$WD"/temp/"$(basename "$sample")"_nonsyn_part"$num" \
     -n 100 \
     -P "$cpus" \

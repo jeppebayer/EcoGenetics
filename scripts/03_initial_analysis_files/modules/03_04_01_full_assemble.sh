@@ -12,6 +12,8 @@ SD=$3 # Species directory
 WD=$4 # Working directory
 sample=$5 # Sample directory
 data=$6 # Path to data location in WD
+n=$7 # Number of parts
+script_path=$8 # Path to script location
 
 # IFS=$'\t' read -r -a part < /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test1.txt
 
@@ -19,8 +21,6 @@ data=$6 # Path to data location in WD
 
 file1=/home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test1.txt
 file2=/home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test2.txt
-
-num=$(paste $file1 $file2 | awk -F "\t" '{$0=$1+$2}')
 
 for part in {1..2..1}; do
     length=${#part}
@@ -37,8 +37,17 @@ for part in {1..2..1}; do
     fi
 done
 
-awk -F '\t' '{n=n+$1} END{print n}' /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test3.txt > /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test4.txt
+for txt in /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test*.txt; do
+    
+    while IFS=$'\t' read -r -a myarray; do
 
-awk '{for(i=1;i<=NF;i++) printf "%s\t",$i}' /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test1.txt > /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test4.txt
+        for element in ${#myarray[@]}; do
+            newarray+=("$element")
+        done
+
+    done < "$txt"
+
+done
+echo "${newarray[@]}"
 
 exit 0
