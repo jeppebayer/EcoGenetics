@@ -23,23 +23,23 @@ sfs()
     -n 100 \
     -P "$cpus" \
     -o \
-    -t 0.005 \
-    > "$WD"/temp/"$(basename "$sample")"_intergenic_part"$num".spectrum
+    -t 0.005
 }
 
 # Adjusts naming according to file number
-length=${#$SLURM_ARRAY_TASK_ID}
+id=${SLURM_ARRAY_TASK_ID}
+length=${#id}
 
-if [ "$length" -lt 2 ]; then
-    num="0$SLURM_ARRAY_TASK_ID"
+if [ $(($length)) -lt 2 ]; then
+    num="0$id"
     sfs
 else
-    num="$SLURM_ARRAY_TASK_ID"
+    num="$id"
     sfs
 fi
 
 # File removal
-rm -f "$WD"/temp/"$(basename "$sample")"_intergenic_part"$num"
+# rm -f "$WD"/temp/"$(basename "$sample")"_intergenic_part"$num"
 
 # for part in {0..19..1}; do
 #     length=${#part}

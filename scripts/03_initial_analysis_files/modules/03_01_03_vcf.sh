@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 30G
-#SBATCH --cpus-per-task 6
+#SBATCH --mem-per-cpu 16G
+#SBATCH --cpus-per-task 15
 #SBATCH --time 30:00:00
-#SBATCH --output=/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps/03_initial_analysis_files/03_02_vcf-%j.out
+#SBATCH --output=/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps/03_init_analysis_files/full_vcf-%j.out
 
 cpus=$1 # Number of CPUs
 RG=$2 # Reference genome
@@ -17,19 +17,21 @@ script_path=$8 # Path to script location
 
 RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna"
 sample="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F"
+WD="/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps"
+data="03_init_analysis_files"
+SD="/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta"
 
 # Creates .vcf files for sample
 freebayes-parallel \
-<(fasta_generate_regions.py "$RG" --chunks 6) 6 \
+<(fasta_generate_regions.py "$RG" --chunks 100) 15 \
 -p 100 \
 -f "$RG" \
--v "$sample"/"$(basename "$sample")".vcf \
+-v "$WD"/"$data"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_full.vcf \
 --pooled-discrete \
-"$sample"/"$(basename "$sample")"_filtered.bam \
-| \
+"$sample"/"$(basename "$sample")"_filtered.bam
 
 # Annotates .vcf file
-snpEff ann > "$WD"/03_initial_analysis_files/"$(basename "$sample")"_ann.vcf
+# snpEff ann > "$WD"/03_initial_analysis_files/"$(basename "$sample")"_ann.vcf
 
 # freebayes -f "$RG" \
 # -p 100 \

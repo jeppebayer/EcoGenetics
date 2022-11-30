@@ -11,6 +11,11 @@ data=$6 # Path to data location in WD
 n=$7 # Number of parts
 script_path=$8 # Path to script location
 
+env_path="$(dirname "$(dirname "$(dirname "$(which python)")")")"
+
+# if [ ! -d "$env_path/poolhmm" ]; then
+
+
 # Activates pool-hmm compatible conda environment
 source /home/"$USER"/.bashrc
 source activate poolhmm
@@ -27,18 +32,19 @@ sfs()
 }
 
 # Adjusts naming according to file number
-length=${#$SLURM_ARRAY_TASK_ID}
+id=${SLURM_ARRAY_TASK_ID}
+length=${#id}
 
-if [ "$length" -lt 2 ]; then
-    num="0$SLURM_ARRAY_TASK_ID"
+if [ $(($length)) -lt 2 ]; then
+    num="0$id"
     sfs
 else
-    num="$SLURM_ARRAY_TASK_ID"
+    num="$id"
     sfs
 fi
 
 # File removal
-rm -f "$WD"/temp/"$(basename "$sample")"_part"$num"
+# rm -f "$WD"/temp/"$(basename "$sample")"_part"$num"
 
 # for part in {0..19..1}; do
 #     length=${#part}

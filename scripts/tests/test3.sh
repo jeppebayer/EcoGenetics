@@ -54,17 +54,30 @@ adjustment=0.1
 
 # echo "$id"
 
-WD=/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps
+# WD=/home/jepe/EcoGenetics/people/Jeppe_Bayer/steps
 
-sample=/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/NYS-F_C25
+# sample=/home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/NYS-F_C25
 
-R1_1=
-for R1_2 in "$sample"/*_1.fq.gz ; do
-    if [ "$R1_1" ]; then
-        cat "$R1_1" "$R1_2" > "$WD"/temp/"$(basename "$sample")"_R1.fq.gz
-    else
-        R1_1=$R1_2
-    fi
-done
+# R1_1=
+# for R1_2 in "$sample"/*_1.fq.gz ; do
+#     if [ "$R1_1" ]; then
+#         cat "$R1_1" "$R1_2" > "$WD"/temp/"$(basename "$sample")"_R1.fq.gz
+#     else
+#         R1_1=$R1_2
+#     fi
+# done
+
+env_path="$(dirname "$(dirname "$(dirname "$(which python)")")")"
+
+echo "$env_path/poolhmm"
+
+# a="1"
+# b=${#a}
+
+# if [ $(($b)) -lt 2 ]; then
+#     echo "0$a"
+# else
+#     echo "$a"
+# fi
 
 exit 0

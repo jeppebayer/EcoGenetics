@@ -11,10 +11,12 @@ data=$6 # Path to data location in WD
 n=$7 # Number of parts
 script_path=$8 # Path to script location
 
+n=$(awk -v p="$n" 'BEGIN { print ( p + 1 ) }')
+
 # Splits file into n parts without splitting lines. Each part gets samplename + number (00-99) + extension (.part)
 split -n l/"$n" -d \
 --additional-suffix .pileup \
 "$WD"/"$data"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_intergenic.pileup \
-"$WD"/temp/"$(basename "$sample")"_integenic_part
+"$WD"/temp/"$(basename "$sample")"_intergenic_part
 
 exit 0

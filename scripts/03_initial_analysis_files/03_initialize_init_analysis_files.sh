@@ -282,23 +282,23 @@ queue01()
         # Create pileup
         jid1_1=$(sbatch \
             --parsable \
-            --time=1440 \
+            --time=720 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_01_01-%j.out \
-            "$script_path"/modules/03_01_01_full_pileup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
+            "$script_path"/modules/03_01_01_full_pileup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
                                 
         echo -e "\t'Pileup - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid1_1" >> "$logfile"
 
         # Split pileup
         jid2_1=$(sbatch \
             --parsable \
-            --time=1440 \
+            --time=60 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_02_01-%j.out \
             --dependency=afterany:"$jid1_1" \
-            "$script_path"/modules/03_02_01_split_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
+            "$script_path"/modules/03_02_01_split_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
 
         echo -e "\t'Split Pileup - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid2_1" >> "$logfile"
     
@@ -307,11 +307,11 @@ queue01()
         # Split pileup
         jid2_1=$(sbatch \
             --parsable \
-            --time=1440 \
+            --time=60 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_02_01-%j.out \
-            "$script_path"/modules/03_02_01_split_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
+            "$script_path"/modules/03_02_01_split_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
         
         echo -e "\tUsing existing full pileup file for $(basename "$sample")" >> "$logfile"
         echo -e "\t'Split Pileup - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid2_1" >> "$logfile"
@@ -323,14 +323,27 @@ queue01()
         --parsable \
         --array=0-"$parts" \
         --chdir="$WD"/temp \
-        --time=1440 \
+        --time=360 \
         --mem-per-cpu="$memory"G \
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_03_01-%j.out \
         --dependency=afterany:"$jid2_1" \
-        "$script_path"/modules/03_03_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
+        "$script_path"/modules/03_03_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
 
     echo -e "\t'Site Ferquency Spectrum - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid3_1" >> "$logfile"
+
+    # # Full SFS array
+    # jid3_1=$(sbatch \
+    #     --parsable \
+    #     --array=0-"$parts" \
+    #     --chdir="$WD"/temp \
+    #     --time=360 \
+    #     --mem-per-cpu="$memory"G \
+    #     --cpus-per-task="$cpus" \
+    #     --output="$stdoutput"/"$(basename "$sample")"_03_01-%j.out \
+    #     "$script_path"/modules/03_03_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+    # echo -e "\t'Site Ferquency Spectrum - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid3_1" >> "$logfile"
 
     # Full SFS assembly
     # jid4_1=$(sbatch \
@@ -340,7 +353,7 @@ queue01()
     #   --cpus-per-task="$cpus" \
     #   --output="$stdoutput"/"$(basename "$sample")"_04_01-%j.out \
     #   --dependency=afterany:"$jid3_1" \
-    #   "$script_path"/modules/03_04_01_full_assemble.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data") # ***Add actual arguments***
+    #   "$script_path"/modules/03_04_01_full_assemble.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
 
     # echo -e "\t'Site Frequency Spectrum Assembly - Full' job has been submitted for $(basename "$sample") -- Job ID: $jid4_1\n" >> "$logfile"
 
@@ -349,7 +362,7 @@ queue01()
     #   --output=/dev/null \
     #   --error=/dev/null \
     #   --dependency=afterany:"${id[1]}" \
-    #   "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data"
+    #   "$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data "$parts" "$script_path""
 }
 
 queue02()
@@ -359,7 +372,7 @@ queue02()
         # Create pileup
         jid1_2=$(sbatch \
             --parsable \
-            --time=1440 \
+            --time=720 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_01_02-%j.out \
@@ -370,7 +383,7 @@ queue02()
         # Split pileup
         jid2_2=$(sbatch \
             --parsable \
-            --time=1440 \
+            --time=60 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_02_02-%j.out \
@@ -384,7 +397,7 @@ queue02()
         # Split pileup
         jid2_2=$(sbatch \
             --parsable \
-            --time=1440 \
+            --time=60 \
             --mem-per-cpu="$memory"G \
             --cpus-per-task="$cpus" \
             --output="$stdoutput"/"$(basename "$sample")"_02_02-%j.out \
@@ -400,7 +413,7 @@ queue02()
         --parsable \
         --array=0-"$parts" \
         --chdir="$WD"/temp \
-        --time=1440 \
+        --time=360 \
         --mem-per-cpu="$memory"G \
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_03_02-%j.out \
@@ -408,6 +421,19 @@ queue02()
         "$script_path"/modules/03_03_02_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
 
     echo -e "\t'Site Ferquency Spectrum - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid3_2" >> "$logfile"
+
+    # # SFS array
+    # jid3_2=$(sbatch \
+    #     --parsable \
+    #     --array=0-"$parts" \
+    #     --chdir="$WD"/temp \
+    #     --time=360 \
+    #     --mem-per-cpu="$memory"G \
+    #     --cpus-per-task="$cpus" \
+    #     --output="$stdoutput"/"$(basename "$sample")"_03_02-%j.out \
+    #     "$script_path"/modules/03_03_02_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
+
+    # echo -e "\t'Site Ferquency Spectrum - Intergenic' job has been submitted for $(basename "$sample") -- Job ID: $jid3_2" >> "$logfile"
 
     # SFS assembly
     # jid4_2=$(sbatch \
@@ -434,7 +460,7 @@ queue03()
     # Create pileup
     jid1_3=$(sbatch \
         --parsable \
-        --time=1440 \
+        --time=720 \
         --mem-per-cpu="$memory"G \
         --cpus-per-task="$cpus" \
         --output="$stdoutput"/"$(basename "$sample")"_01_03-%j.out \
