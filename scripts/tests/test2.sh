@@ -1,13 +1,12 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 2G
+#SBATCH --mem-per-cpu 10G
 #SBATCH --cpus-per-task 1
-#SBATCH --time 00:30:00
+#SBATCH --time 01:00:00
 
-RG=$1
+lines=$(wc -l /home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup)
 
-echo "$RG"
+echo "$lines"
 
-!!!ATTENTION!!!
 exit 0

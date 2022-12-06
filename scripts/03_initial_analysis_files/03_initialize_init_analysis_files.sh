@@ -51,8 +51,8 @@ OPTIONS:
     -a  TYPE            Choice of analysis files to create. 'full' = the entire genome,
                         'intergene' = for intergenic regions, 'nonsyn' = for non-
                         synonymous regions, 'all' for all of the above [default]
-    -m  INTEGER         Amount of memory to be used by each CPU. 8 [default]
-    -c  INTEGER         Number of CPUs to be used. 8 [default]
+    -m  INTEGER         Amount of memory to be used by each CPU. 10 [default]
+    -c  INTEGER         Number of CPUs to be used. 10 [default]
     -u                  Run only on a single sample. -s then needs to lead to
 						the specific sample
     -f                  Force run even if target sample directory contains relevant files
@@ -82,10 +82,10 @@ queuetype="all"
 parts="100"
 
 # Define memory per cpu in G (must be integer)
-memory="8"
+memory="10"
 
 # Define number of cpus to be used (must be integer)
-cpus="8"
+cpus="10"
 
 # Option to only run a single sample
 single_sample="N"
@@ -323,10 +323,10 @@ queue01()
         --parsable \
         --array=0-"$parts" \
         --chdir="$WD"/temp \
-        --time=360 \
+        --time=60 \
         --mem-per-cpu="$memory"G \
         --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_03_01-%j.out \
+        --output="$stdoutput"/"$(basename "$sample")"_03_01-%a-%j.out \
         --dependency=afterany:"$jid2_1" \
         "$script_path"/modules/03_03_01_sfs_full.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
 
@@ -413,10 +413,10 @@ queue02()
         --parsable \
         --array=0-"$parts" \
         --chdir="$WD"/temp \
-        --time=360 \
+        --time=60 \
         --mem-per-cpu="$memory"G \
         --cpus-per-task="$cpus" \
-        --output="$stdoutput"/"$(basename "$sample")"_03_02-%j.out \
+        --output="$stdoutput"/"$(basename "$sample")"_03_02-%a-%j.out \
         --dependency=afterany:"$jid2_2" \
         "$script_path"/modules/03_03_02_sfs_intergenic.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$data" "$parts" "$script_path") # ***Add actual arguments***
 

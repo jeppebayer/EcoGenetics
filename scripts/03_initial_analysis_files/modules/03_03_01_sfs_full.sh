@@ -28,6 +28,7 @@ sfs()
     -n 100 \
     -P "$cpus" \
     -o \
+    -e sanger \
     -t 0.005
 }
 
