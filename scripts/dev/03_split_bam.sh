@@ -11,9 +11,17 @@ split()
     samtools view \
     -@ 9 \
     -b \
-    -o /home/jepe/EcoGenetics/people/Jeppe_Bayer/data/temp/Ocin_NYS-F_"$num".bam \
-    /home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F_filtered.bam \
+    -o /faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/Ocin_NYS-F_"$num".bam \
+    /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F_filtered.bam \
     "$region"
+}
+index()
+{
+    samtools index \
+    -@ 9 \
+    -b \
+    /faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/Ocin_NYS-F_"$num".bam \
+    > /faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/Ocin_NYS-F_"$num".bam.bai
 }
 
 # Adjusts naming according to file number
@@ -23,9 +31,11 @@ length=${#id}
 if [ $(($length)) -lt 2 ]; then
     num="0$id"
     split
+    index
 else
     num="$id"
     split
+    index
 fi
 
 exit 0

@@ -1,24 +1,21 @@
 # **NOTEBOOK**
 
-## **[CLUSTER FUNCTIONS](docs/cluster_functions.md)**
+[Next](docs/01_00_ecogenetics_setup.md)
 
----
+## Quick Navigation
 
-## **[ECOGENETICS SETUP](docs/project_setup.md)**
+**[NOTEBOOK](NOTEBOOK.md)**  
+**[01 ECOGENETICS SETUP](docs/01_00_ecogenetics_setup.md)**  
+**[02 PROCEDURE](docs/02_00_procedure.md)**  
 
----
+- **[02 01 Indexing Reference Genome](docs/02_01_indexing_reference_genome_procedure.md)**
+- **[02 02 Data Preparation](docs/02_02_data_preparation_procedure.md)**
+- **[02 03 Initial Analysis Files](docs/02_03_initial_analysis_procedure.md)**
+- **[02 04 Genome Assembly and Annotation](docs/02_04_genome_assembly_and_annotation.md)**
 
-## **[SOFTWARE](docs/software.md)**
-
----
-
-## **[TERMINOLOGY](docs/terminology.md)**
-
----
-
-## **[PROCEDURE](docs/procedure.md)**
-
----
+**[03 TERMINOLOGY](docs/03_00_terminology.md)**  
+**[04 SOFTWARE](docs/04_00_software.md)**  
+**[05 CLUSTER FUNCTIONS](docs/05_00_cluster_functions.md)**  
 
 ## **TO-DO**
 
@@ -588,4 +585,5 @@ Also have some pictures data need to made to schematics and need new illustratio
   01_01_indexing_reference_genome orchesella_cincta  
   8940740
   01_01_indexing_reference_genome pogonognathellus_flavescens
-  
+
+[Next](docs/01_00_ecogenetics_setup.md)
