@@ -29,7 +29,7 @@ lines=$(wc -l < /faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/qname.t
 #     --mem-per-cpu=10G \
 #     --cpus-per-task=10 \
 #     --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/out/split_bam-%a-%j.out \
-#     /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_split_bam.sh people/Jeppe_Bayer/data/qname.txt)
+#     /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_split_bam.sh "$lines" people/Jeppe_Bayer/data/qname.txt)
 
 # jid2=$(sbatch \
 #     --parsable \
@@ -39,22 +39,22 @@ lines=$(wc -l < /faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/qname.t
 #     --cpus-per-task=5 \
 #     --dependency=afterany:"$jid1" \
 #     --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/out/freebayes-%a-%j.out \
-#     /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_freebayes.sh people/Jeppe_Bayer/data/qname.txt)
+#     /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_freebayes.sh "$lines" people/Jeppe_Bayer/data/qname.txt)
 
 jid2=$(sbatch \
     --parsable \
     --array=1-"$lines" \
-    --time=420 \
+    --time=600 \
     --mem-per-cpu=30G \
-    --cpus-per-task=5 \
-    --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/out/freebayes-%a-%j.out \
-    /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_freebayes.sh people/Jeppe_Bayer/data/qname.txt)
-
-sbatch \
-    --parsable \
-    --time=360 \
-    --mem-per-cpu=10G \
     --cpus-per-task=10 \
-    --dependency=afterany:"$jid2" \
-    --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/out/concatenate-%a-%j.out \
-    /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_combine_vcf.sh
+    --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/out/freebayes-%a-%j.out \
+    /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_freebayes.sh "$lines" people/Jeppe_Bayer/data/qname.txt)
+
+# sbatch \
+#     --parsable \
+#     --time=360 \
+#     --mem-per-cpu=10G \
+#     --cpus-per-task=10 \
+#     --dependency=afterany:"$jid2" \
+#     --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/out/concatenate-%a-%j.out \
+#     /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/03_combine_vcf.sh

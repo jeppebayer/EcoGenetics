@@ -6,6 +6,34 @@
 #SBATCH --time 00:40:00
 #SBATCH --output=Index_Reference_Genome-%j.out
 
+# ----------------- Usage ------------------------------------------------
+
+usage()
+{
+cat << EOF
+
+Usage: 01_initialize_indexing_reference.sh [OPTIONS]
+
+This script is used for initializing indexation of reference genomes used at
+the Center for EcoGenetics.
+Can be run on the frontend, as its resource-demands are fairly, or run in 
+conjunction with 'sbatch'or 'srun'.
+
+OPTIONS:
+    -r  DIRECTORY       Directory containing reference genome
+    -f                  Force run. Index reference genome even if it has been
+                        indexed previously
+    -a                  Index all available reference genomes (Cannot be run -r)
+    -h                  Show this message
+
+Tested and working using:
+'EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml'
+
+EOF
+}
+
+# ----------------- Configuration ----------------------------------------
+
 # Option to force run even if target sample directory contains index files
 force_overwrite="N"
 

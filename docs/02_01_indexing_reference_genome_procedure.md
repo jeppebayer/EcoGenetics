@@ -22,32 +22,15 @@ Needed software packages:
 - bwa
 - samtools
 
+## Step 0: Initialization
+
+[Location](../scripts/01_indexing_reference_genome/)
+
 ## Step 1: Indexing
 
 ### Script 01
 
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 2:00:00
-
-# Species specific reference genome, abosolute path (reference genome in FASTA format)
-RG=""
-
-# Indexing reference genome for aligning
-bwa index \
--p "${RG%.*}" \
-"$RG" ; \
-
-# Adding fai index to reference
-samtools faidx \
--o "$RG".fai \
-"$RG"
-
-exit 0
-```
+[01_01_indexing_reference.sh](../scripts/01_indexing_reference_genome/modules/01_01_indexing_reference.sh)  
+Creates standard indexation files relating to BWA and a .fai index file from samtools.
 
 [Previous](02_00_procedure.md) | [Next](02_02_data_preparation_procedure.md)

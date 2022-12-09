@@ -29,207 +29,47 @@ Conda environmnet used:
 
 ## Step 0: Initialization
 
+[Location](../scripts/02_data_preparation/)
+
 (Dependency tree slightly outdated)
 ![dependency_tree](../resources/dependency_chart_data_preparation.png)
 
-## Step 1: Removal of overlapping sequences
+## Step 1: Removal of overlapping sequences and aligningment
 
-### Script 01
+### Script 01 AdapterRemoval
 
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
+Three different scripts for each possible case of sample sequence files:
 
-cpus=$1 # Number of CPUs
-RG=$2 # Reference genome
-SD=$3 # Species directory
-WD=$4 # Working directory
-sample=$5 # Sample directory
-script_path=$6 # Path to script location
-algo=$7 # Chosen algorithm
+- [02_01_paired_adapterremoval.sh](../scripts/02_data_preparation/modules/02_01_paired_adapterremoval.sh)  
+    If the sample has been paired-end sequenced.
+- [02_01_pairedseveral_adapterremoval.sh](../scripts/02_data_preparation/modules/02_01_pairedseveral_adapterremoval.sh)  
+    If the sample has been paired-end sequenced in multiple sets.
+- [02_01_single_adapterremoval.sh](../scripts/02_data_preparation/modules/02_01_single_adapterremoval.sh)  
+    If the sample has been single-end sequenced.
 
-R1=
+### Script 02
 
-for R2 in "$sample"/*.fq.gz ; do
-    if [ "$R1" ] ; then
-        # 2nd entry
-        AdapterRemoval \
-        --threads 8 \
-        --file1 "$R1" \
-        --file2 "$R2" \
-        --adapter1 AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA \
-        --adapter2 AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG \
-        --minquality 25 \
-        --minlength 20 \
-        --basename "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed \
-        --trimns \
-        --trimqualities \
-        --collapse
+Two different script sets, one for paired-end and one for single-end samples:
 
-    else
-        # First entry
-        R1=$R2
-    fi
-done
-
-# File removal
-rm -f \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.discarded \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.settings \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.singleton.truncated
-
-exit 0
-```
-
-### Script 02_01
-
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
-
-cpus=$1 # Number of CPUs
-RG=$2 # Reference genome
-SD=$3 # Species directory
-WD=$4 # Working directory
-sample=$5 # Sample directory
-script_path=$6 # Path to script location
-algo=$7 # Chosen algorithm
-
-# Align sample to reference genome
-bwa "$algo" -t "$cpus" \
-"${RG%.*}" \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated \
-| \
-
-# Sort with regards to QNAME and convert to bam format
-samtools sort -@ "$(("$cpus" - 1))" -n -O BAM \
--T "$WD"/temp/ \
--o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
--
-
-# File removal
-rm -f \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated
-
-exit 0
-```
-
-### Script 02_02
-
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
-
-cpus=$1 # Number of CPUs
-RG=$2 # Reference genome
-SD=$3 # Species directory
-WD=$4 # Working directory
-sample=$5 # Sample directory
-script_path=$6 # Path to script location
-algo=$7 # Chosen algorithm
-
-# Concatenating collapsed single-end files
-cat \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed.truncated \
-> "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.all_collapsed
-
-# Align sample to reference genome
-bwa "$algo" -t "$cpus" \
-"${RG%.*}" \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.all_collapsed \
-| \
-
-# Sort with regards to QNAME and convert to bam format
-samtools sort -@ "$(("$cpus" - 1))" -n -O BAM \
--T "$WD"/temp/  \
--o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam \
--
-
-# File removal
-rm -f \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.collapsed.truncated \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.all_collapsed
-
-exit 0
-```
+- Paired-end
+  - [02_02_paired_01_alignment.sh](../scripts/02_data_preparation/modules/02_02_paired_01_alignment.sh)  
+        Works on non-overlapping areas
+  - [02_02_paired_02_alignment.sh](../scripts/02_data_preparation/modules/02_02_paired_02_alignment.sh)  
+        Works on overlapping areas
+- Single-end
+  - [02_02_single_alignment.sh](../scripts/02_data_preparation/modules/02_02_single_alignment.sh)
 
 ### Script 03
 
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
+Only needed for paired-end samples - Merges alignments:
 
-cpus=$1 # Number of CPUs
-RG=$2 # Reference genome
-SD=$3 # Species directory
-WD=$4 # Working directory
-sample=$5 # Sample directory
-script_path=$6 # Path to script location
-algo=$7 # Chosen algorithm
-
-# Merge R1R2 and collapsed file to one name-sorted bam file
-samtools merge -@ "$(("$cpus" - 1))" \
--o "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
--c -p -n \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam
-
-# File removal
-rm -f \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_paired_aligned.bam \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_collapsed_aligned.bam
-
-exit 0
-```
+[02_03_paired_merge.sh](../scripts/02_data_preparation/modules/02_03_paired_merge.sh)
 
 ## Step 2: Mark duplicates
 
 ### Script 04
 
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
 
-cpus=$1 # Number of CPUs
-RG=$2 # Reference genome
-SD=$3 # Species directory
-WD=$4 # Working directory
-sample=$5 # Sample directory
-script_path=$6 # Path to script location
-algo=$7 # Chosen algorithm
-
-# Add fixmate tag to alignment. Can only be done on name sorted alignment
-samtools fixmate -@ "$(("$cpus" - 1))" -m -O BAM \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam \
-- | \
-
-# Position sort alignment and pipe output
-samtools sort -@ "$(("$cpus" - 1))" -O BAM \
--T "$WD"/temp/ \
-- | \
-
-# Mark duplicates and save output as .coordinatesort.bam. Also outputs some realted statistics
-samtools markdup -@ "$(("$cpus" - 1))" -s \
--f "$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/pre_filter_stats/"$(basename "$sample")"_markdup.markdupstats \
--T "$WD"/temp/ \
-- \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_markdup.bam
-
-# File removal
-rm -f \
-"$WD"/"$(basename "$script_path")"/"$(basename "$SD")"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed_complete_aligned.bam
-
-exit 0
-```
 
 ## Step 3: Statistics pre-filtering
 

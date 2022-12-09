@@ -5,8 +5,21 @@
 #SBATCH --cpus-per-task 1
 #SBATCH --time 01:00:00
 
-lines=$(wc -l /home/jepe/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup)
+lines=$(wc -l < /home/jepe/EcoGenetics/people/Jeppe_Bayer/data/qname.txt)
 
-echo "$lines"
+id="1"
+idlength=${#id}
+lineslength=${#lines}
+
+if [ $((idlength)) -lt $((lineslength)) ]; then
+    dif=$((lineslength - idlength))
+    num=""
+    for (( i=1;  i<="$dif"; i++ )); do
+        num="0$num"
+    done
+    num="$num$id"
+else
+    num="$id"
+fi
 
 exit 0

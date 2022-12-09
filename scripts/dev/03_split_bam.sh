@@ -2,7 +2,8 @@
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
 
-regionfile=$1
+lines=$1
+regionfile=$2
 
 region=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$regionfile")
 
@@ -26,16 +27,30 @@ index()
 
 # Adjusts naming according to file number
 id=${SLURM_ARRAY_TASK_ID}
-length=${#id}
+idlength=${#id}
+lineslength=${#lines}
 
-if [ $(($length)) -lt 2 ]; then
-    num="0$id"
+if [ $((idlength)) -lt $((lineslength)) ]; then
+
+    dif=$((lineslength - idlength))
+    num=""
+
+    for (( i=1;  i<="$dif"; i++ )); do
+
+        num="0$num"
+
+    done
+
+    num="$num$id"
     split
     index
+
 else
+
     num="$id"
     split
     index
+    
 fi
 
 exit 0
