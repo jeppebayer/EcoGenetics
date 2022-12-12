@@ -21,26 +21,12 @@ Needed software packages:
 
 - samtools
 
+## Step 0: Initialization
+
+[Initialization script](../scripts/03_initial_analysis_files/03_initialize_init_analysis_files.sh)
+
 ## Step 1: Create pileup file
 
 ### Script 01
-
-```bash
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
-#SBATCH --mem-per-cpu 6G
-#SBATCH --cpus-per-task 8
-#SBATCH --time 20:00:00
-
-# Make mpileup file
-samtools mpileup \
--C 50 \
--o sample.mpileup \
--f <reference_genome> \
-filtered.bam
-
-exit 0
-```
 
 [Previous](02_02_data_preparation_procedure.md) | [Next](02_04_genome_assembly_and_annotation.md)

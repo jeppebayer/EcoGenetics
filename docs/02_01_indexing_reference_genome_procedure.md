@@ -24,7 +24,7 @@ Needed software packages:
 
 ## Step 0: Initialization
 
-[Location](../scripts/01_indexing_reference_genome/)
+[Initialization script](../scripts/01_indexing_reference_genome/)
 
 ## Step 1: Indexing
 

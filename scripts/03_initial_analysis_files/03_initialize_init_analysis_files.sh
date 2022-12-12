@@ -94,7 +94,7 @@ single_sample="N"
 force_overwrite="N"
 
 # Name of data directory
-data="03_init_analysis_files"
+data="03_initial_analysis_files"
 
 # Gets path to script
 # If run through sbatch or srun:

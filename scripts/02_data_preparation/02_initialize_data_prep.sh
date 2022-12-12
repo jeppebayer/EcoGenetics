@@ -46,14 +46,14 @@ PARAMETERS (must be assigned):
 
 OPTIONS:
     -d  DIRECTORY       Working directory. If not assigned, will use current 
-						working directory [default]
+                        working directory [default]
     -a  ALGORITHM       Choice of algorithm to be used during alignment.
-						'mem' (>70MB, contemporary samples)[default] or 
-						'aln' (<70MB, historic samples)
+                        'mem' (>70MB, contemporary samples)[default] or 
+                        'aln' (<70MB, historic samples)
     -m  INTEGER         Amount of memory to be used by each CPU. 8 [default]
     -c  INTEGER         Number of CPUs to be used. 8 [default]
-	-u					Run only on a single sample. -s then needs to lead to
-						the specific sample
+    -u                  Run only on a single sample. -s then needs to lead to
+                        the specific sample
     -f                  Force run even if target sample directory contains .bam
     -h                  Show this message
 

@@ -194,7 +194,7 @@ https://zzz.bwh.harvard.edu/plink/
 https://www.cog-genomics.org/plink/
 
 ## **BCFtools plugin**
-	
+
 - frameshifts
     annotates frameshift indels  
     https://samtools.github.io/bcftools/howtos/plugins.html
