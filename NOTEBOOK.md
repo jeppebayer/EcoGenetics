@@ -384,6 +384,17 @@ Looking into genome assembly and annotation. I have gotten workflow files from J
 Need to do some general housekeeping and reorganization of files.  
 Also have some pictures data need to made to schematics and need new illustrations for some proccesses.
 
+### **15/12-2022**
+
+After correspondence with Simon Boitard, the creater of Pool-HMM, the issues relating to Pool-Hmm seem to possibly be related to the cluster itself. The program cannot currently be reliably used to create SFS for the samples but we still intend on using it for detecting possible selective sweeps. As an alternative to create SFS we, Jesper, Mads and I, have decided that I will use a small sub-program from Popoolation2 that creates files of the format sync. This is basically just a program to directly count variants occuring in a mpileup. I will then create a collection of scripts that use this format to create SFS files that can be used with Pool-HMM.
+The created SFS will be folded and adhere to the following criteria:
+
+- Not contain any reads with more than 2 alternatve bases
+- Not contain any reads with ambiguous bases or deletions.
+- Only contain reads with at least 2 observations for the MA
+- All reads have a coverage of >= 200x
+- Percentages will be rounded to nearest integer. Less than 0.5 percent is not counted
+
 ---
 
 ## **JOBS**

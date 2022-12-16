@@ -2,10 +2,11 @@
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
 
-syncfile="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/tests/sync.txt"
+syncfile="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/03_sfs/Ocin_NYS-F_filtered.sync"
+A=100
 
-# Creates array containing 0's with a length matching the half the number of alleles
-alleles=$((100 / 2))
+# Creates array containing 0's with a length matching half the number of alleles
+alleles=$((A / 2))
 
 sfsarray=()
 
@@ -52,7 +53,7 @@ while read -ra line; do
 done < $syncfile
 
 # Creates and writes to spectrum file
-spectrum="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/tests/sync.spectrum"
+spectrum="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/03_sfs/Ocin_NYS-F.spectrum"
 touch "$spectrum"
 
 for (( i=1; i<=alleles; i++ ));do

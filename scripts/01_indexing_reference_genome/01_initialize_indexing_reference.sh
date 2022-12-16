@@ -86,8 +86,8 @@ queue()
 	sbatch \
 		--parsable \
 		--time=120 \
-		--mem-per-cpu=8G \
-		--cpus-per-task=8 \
+		--mem-per-cpu=16G \
+		--cpus-per-task=2 \
 		--output=/dev/null \
 		--error=/dev/null \
 		"$script_path"/modules/01_01_indexing_reference.sh "$RG"

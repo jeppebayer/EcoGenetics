@@ -31,6 +31,13 @@ Tips/tricks from Jilong to keep in mind:
 - For me, running 3D-DNA without mis-joint correction rounds works well. (By setting -r 0). The mis-joint corrections sometimes may even decrease the assembly quality. It is because the combination of HiFi contigs and HiC provide quite high confidence already and mis-joint correction focuses more on troubles from short reads contigs.
 - It is the XXXX.0.assembly file that i used to check HiC, fix orders, and split chromosomes after scaffolding.
 
+### 3D-DNA
+
+3d-dna files installed to /home/jepe/miniconda3/envs/genome_assembly/share/3d-dna
+
+executable '3d-dna' added to PATH, an alias for /home/jepe/miniconda3/envs/genome_assembly/share/3d-dna/run-asm-pipeline.sh
+e.g. you can run '3d-dna contigs.fa hic.mnd'
+
 ## Genome Annotation
 
 ![jilong_annotation1](../resources/jilong_annotation1.png)
@@ -44,5 +51,16 @@ Tips/tricks from Jilong to keep in mind:
 
 - The repbase (curated repeat sequence database) is stored in the cluster /home/jilong/spider2/faststorage/social_spiders_2020/data/public_data/repbase
 - I use the repbase combined with repeatmodeler generated database to do repeatmasking. But in my case, I didn't see a huge difference in using repbase or not
+
+### BRAKER2
+
+The config/ directory from AUGUSTUS can be accessed with the variable AUGUSTUS_CONFIG_PATH.
+BRAKER2 requires this directory to be in a writable location, so if that is not the case, copy this directory to a writable location, e.g.:
+cp -r /home/jepe/miniconda3/envs/genome_annotation/config/ /absolute_path_to_user_writable_directory/
+export AUGUSTUS_CONFIG_PATH=/absolute_path_to_user_writable_directory/config
+
+Due to license and distribution restrictions, GeneMark and ProtHint should be additionally installed for BRAKER2 to fully work.
+These packages can be either installed as part of the BRAKER2 environment, or the PATH variable should be configured to point to them.
+The GeneMark key should be located in /home/jepe/.gm_key and GENEMARK_PATH should include the path to the GeneMark executables.
 
 [Previous](02_03_initial_analysis_procedure.md) | [Next](03_00_terminology.md)

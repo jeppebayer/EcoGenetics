@@ -43,6 +43,6 @@ else
     
 fi
 
-rm -f /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_filtered_"$num".mpileup
+# rm -f /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_filtered_"$num".mpileup
 
 exit 0

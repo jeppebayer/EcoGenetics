@@ -30,6 +30,6 @@ while read -ra line; do
 
 done < /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/temp.sync > /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/03_sfs/Ocin_NYS-F_filtered.sync
 
-rm -f /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/tests/synctemp.txt
+rm -f /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/temp.sync
 
 exit 0

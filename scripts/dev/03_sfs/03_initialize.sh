@@ -33,29 +33,29 @@ lines=$(wc -l < "$temp"/qname.txt)
 
 jid1=$(sbatch \
     --parsable \
-    --array=1-"$lines" \
-    --time=120 \
+    --array=1-"$lines"%200 \
+    --time=180 \
     --mem-per-cpu=10G \
-    --cpus-per-task=5 \
+    --cpus-per-task=4 \
     --output="$out"/split_pileup-%a-%j.out \
     "$scripts"/03_split_pileup.sh "$lines" "$temp"/qname.txt)
 
 jid2=$(sbatch \
     --parsable \
-    --array=1-"$lines" \
+    --array=1-"$lines"%50 \
     --time=180 \
     --mem-per-cpu=10G \
-    --cpus-per-task=5 \
+    --cpus-per-task=4 \
     --dependency=aftercorr:"$jid1" \
     --output="$out"/filter_coverage-%a-%j.out \
     "$scripts"/03_filter_coverage.sh "$lines" "$temp"/qname.txt)
 
 jid3=$(sbatch \
     --parsable \
-    --array=1-"$lines" \
+    --array=1-"$lines"%50 \
     --time=180 \
     --mem-per-cpu=10G \
-    --cpus-per-task=5 \
+    --cpus-per-task=4 \
     --dependency=aftercorr:"$jid2" \
     --output="$out"/mpileup_to_sync-%a-%j.out \
     "$scripts"/03_mpileup_to_sync.sh "$lines" "$temp"/qname.txt)
@@ -64,7 +64,7 @@ jid4=$(sbatch \
     --parsable \
     --time=180 \
     --mem-per-cpu=10G \
-    --cpus-per-task=10 \
+    --cpus-per-task=4 \
     --dependency=afterany:"$jid3" \
     --output="$out"/concat_sync-%j.out \
     "$scripts"/03_concat_sync.sh "$lines" "$temp"/qname.txt)
@@ -73,9 +73,18 @@ jid5=$(sbatch \
     --parsable \
     --time=180 \
     --mem-per-cpu=10G \
-    --cpus-per-task=10 \
+    --cpus-per-task=4 \
     --dependency=afterany:"$jid4" \
     --output="$out"/readsync-%j.out \
     "$scripts"/03_readsync.sh "$lines" "$temp"/qname.txt)
+
+jid6=$(sbatch \
+    --parsable \
+    --time=240 \
+    --mem-per-cpu=15G \
+    --cpus-per-task=6 \
+    --dependency=afterany:"$jid5" \
+    --output="$out"/calculate_sfs-%j.out \
+    "$scripts"/03_calculate_sfs.sh "$lines" "$temp"/qname.txt)
 
 exit 0
