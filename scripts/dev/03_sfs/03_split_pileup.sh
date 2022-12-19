@@ -10,11 +10,15 @@ region=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$regionfile")
 # Function to split pileup file by scaffold
 split()
 {
+    parallel \
+    --pipepart \
+    --block -4 \
+    --jobs 4 \
+    -k \
+    -a /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup \
     grep "$region" \
-    /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup \
     > /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_"$num".mpileup
 }
-
 
 # Adjusts naming according to file number
 id=${SLURM_ARRAY_TASK_ID}

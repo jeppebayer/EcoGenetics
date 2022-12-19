@@ -13,7 +13,7 @@ create_sync()
     perl /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/popoolation2_v1.201/mpileup2sync.pl \
     --input /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_filtered_"$num".mpileup \
     --fastq-type sanger \
-    --min-qual 0 \
+    --min-qual 1 \
     --output /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_"$num".sync
 }
 

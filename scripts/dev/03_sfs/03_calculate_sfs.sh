@@ -70,4 +70,11 @@ for (( i=1; i<=alleles; i++ ));do
 
 done
 
+# Removes empty .out files
+for file in /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/03_sfs/out/*; do
+    if [ ! -s "$file" ]; then
+        rm -f "$file"
+    fi
+done
+
 exit 0

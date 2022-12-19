@@ -7,7 +7,7 @@
 #SBATCH --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/out/freebayes-test13-%j.out
 
 export TMPDIR=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/temp/freebayes
-mkdir -p "$TMPDIR"
+[ -d "$TMPDIR" ] || mkdir -m 775 "$TMPDIR"
 
 regionfile=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/qname.txt
 

@@ -38,6 +38,29 @@ Tips/tricks from Jilong to keep in mind:
 executable '3d-dna' added to PATH, an alias for /home/jepe/miniconda3/envs/genome_assembly/share/3d-dna/run-asm-pipeline.sh
 e.g. you can run '3d-dna contigs.fa hic.mnd'
 
+### Hifiasm
+
+Hifiasm produces primary/alternate assemblies or partially phased assemblies only with HiFi reads. Different types of commonly used assemblies <https://lh3.github.io/2021/04/17/concepts-in-phased-assemblies>.
+
+Hifiasm outputs assemblies in [GFA](https://github.com/GFA-spec/GFA-spec/blob/master/GFA-spec.md) (Graphical Fragment Assembly) format
+
+### Juicer HiC Alignment
+
+```bash
+bash /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/juicer/scripts/juicer.sh \
+-d \ # top level directory. Working directory, needs to contain a folder name /fastq containing the fastq files. A folder will also be created here for temporary files and the final alignement
+-D faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/juicer \ # juicer scripts parent directory
+-p chrom.sizes \ # path to chrom.sizes file
+-s none \ # site definition
+-z [fasta] \ # path to reference genome file
+-q short \ # the queue for running alignments
+-Q 12:00:00 \ # queue time limit
+-l normal \ # the queue for running longer jobs such as hic
+-L 24:00:00 \ # long queue time limit
+-t 36 \ # number of threads
+> [species]_juicer.log
+```
+
 ## Genome Annotation
 
 ![jilong_annotation1](../resources/jilong_annotation1.png)

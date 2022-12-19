@@ -16,49 +16,63 @@ out="$WD"/out
 [ -d "$out" ] || mkdir -m 775 "$out"
 
 # Creates file with all QNAME from .bam file
-samtools view -H /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F_filtered.bam \
-| grep '@SQ' \
-| awk '{print $2}' \
-> "$temp"/headertemp.txt
 
-while read -r line; do
-    echo "${line:3}"
-done < "$temp"/headertemp.txt > "$temp"/qname.txt
+if [ ! -e "$temp"/qname.txt ]; then
 
-# Removes temp header file
-rm -f "$temp"/headertemp.txt
+    samtools view -H /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F_filtered.bam \
+    | grep '@SQ' \
+    | awk '{print $2}' \
+    > "$temp"/headertemp.txt
+
+    while read -r line; do
+        echo "${line:3}"
+    done < "$temp"/headertemp.txt > "$temp"/qname.txt
+
+    # Removes temp header file
+    rm -f "$temp"/headertemp.txt
+
+fi
 
 # Number of lines, eg. number of unique IDs
 lines=$(wc -l < "$temp"/qname.txt)
 
 jid1=$(sbatch \
     --parsable \
-    --array=1-"$lines"%200 \
-    --time=180 \
+    --array=1-"$lines"%300 \
+    --time=270 \
     --mem-per-cpu=10G \
     --cpus-per-task=4 \
-    --output="$out"/split_pileup-%a-%j.out \
+    --output="$out"/split_pileup-%a-%j-%A.out \
     "$scripts"/03_split_pileup.sh "$lines" "$temp"/qname.txt)
 
 jid2=$(sbatch \
     --parsable \
-    --array=1-"$lines"%50 \
+    --array=1-"$lines"%100 \
     --time=180 \
     --mem-per-cpu=10G \
     --cpus-per-task=4 \
     --dependency=aftercorr:"$jid1" \
-    --output="$out"/filter_coverage-%a-%j.out \
+    --output="$out"/filter_coverage-%a-%j-%A.out \
     "$scripts"/03_filter_coverage.sh "$lines" "$temp"/qname.txt)
 
 jid3=$(sbatch \
     --parsable \
-    --array=1-"$lines"%50 \
+    --array=1-"$lines"%100 \
     --time=180 \
     --mem-per-cpu=10G \
     --cpus-per-task=4 \
     --dependency=aftercorr:"$jid2" \
-    --output="$out"/mpileup_to_sync-%a-%j.out \
+    --output="$out"/mpileup_to_sync-%a-%j-%A.out \
     "$scripts"/03_mpileup_to_sync.sh "$lines" "$temp"/qname.txt)
+
+# jid3=$(sbatch \
+#     --parsable \
+#     --array=1-"$lines"%50 \
+#     --time=240 \
+#     --mem-per-cpu=10G \
+#     --cpus-per-task=4 \
+#     --output="$out"/mpileup_to_sync-%a-%j-%A.out \
+#     "$scripts"/03_mpileup_to_sync.sh "$lines" "$temp"/qname.txt)
 
 jid4=$(sbatch \
     --parsable \
