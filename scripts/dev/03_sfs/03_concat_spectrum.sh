@@ -11,7 +11,7 @@ temp=$6 # Directory for temporary files
 sampledir=$7 # Sample specific directory within data directory
 keep_temp=$8 # Flag for whether or not temporary files should be kept
 
-filelist="$temp"/"$namebase"_sync_filelist.txt
+filelist="$temp"/"$namebase"_spectrum_filelist.txt
 touch "$filelist"
 
 # Adjusts naming according to file number
@@ -31,33 +31,62 @@ for (( i=1; i<="$lines"; i++ )); do
         done
 
         num="$num$i"
-        echo "$temp"/"$namebase"_"$num".sync >> "$filelist"
+        echo "$temp"/"$namebase"_"$num".spectrum >> "$filelist"
 
     else
 
         num="$i"
-        echo "$temp"/"$namebase"_"$num".sync >> "$filelist"
+        echo "$temp"/"$namebase"_"$num".spectrum >> "$filelist"
         
     fi
 done
 
 sort -n -o "$filelist" "$filelist"
 
-touch "$sampledir"/"$namebase".sync
-
 files=$(cat "$filelist")
 
-for file in $files; do
+# Creates array containing 0's with a length matching half the number of alleles
+alleles=$((A / 2))
 
-    cat "$file" >> "$sampledir"/"$namebase".sync
+sfsarray=()
 
-    if [ "$keep_temp" == "N" ]; then
-        rm -f "$file"
-        rm -f "$file".params
-    fi 
+for (( i=1; i<=alleles; i++ )); do
+
+    sfsarray[i]=0
 
 done
 
+oldIFS=$IFS
+
+for file in $files; do
+
+    IFS=$'\t' read -d '' -r -a arraypart <"$file"
+    for (( i=1; i<=alleles; i++ )); do
+        j=$(( i - 1 ))
+        sfsarray[i]=$((sfsarray[i] + arraypart[j]))
+    done
+
+    if [ "$keep_temp" == "N" ]; then
+        rm -f "$file"
+    fi 
+    
+    IFS=$oldIFS
+done
+
 rm -f "$filelist"
+
+# Creates spectrum file
+spectrumfile="${S%.*}".spectrum
+touch "$spectrumfile"
+
+for (( i=1; i<=alleles; i++ ));do
+
+    if [ $i == $alleles ]; then
+        echo "${sfsarray[$i]}" >> "$spectrumfile"   
+    else
+        echo -ne "${sfsarray[$i]}\t" >> "$spectrumfile"
+    fi
+
+done
 
 exit 0

@@ -2,18 +2,22 @@
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
 
-lines=$1
-regionfile=$2
-
-region=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$regionfile")
+lines=$1 # Number of unique IDs
+qname=$2 # File containing IDs
+S=$3 # Path to sample .mpileup file
+A=$4 # Number of alleles in sample
+namebase=$5 # Current name base for sample
+temp=$6 # Directory for temporary files
+sampledir=$7 # Sample specific directory within data directory
+keep_temp=$8 # Flag for whether or not temporary files should be kept
 
 # Function to filter mpileup for reads with coverage <= 200
 filter()
 {
     awk \
     '$4 >= 200' \
-    /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_"$num".mpileup \
-    > /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_filtered_"$num".mpileup
+    "$temp"/"$namebase"_"$num".mpileup \
+    > "$temp"/"$namebase"_filtered_"$num".mpileup
 }
 
 # Adjusts naming according to file number
@@ -42,6 +46,8 @@ else
     
 fi
 
-# rm -f /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_"$num".mpileup
+if [ "$keep_temp" == "N" ]; then
+    rm -f "$temp"/"$namebase"_"$num".mpileup
+fi 
 
 exit 0

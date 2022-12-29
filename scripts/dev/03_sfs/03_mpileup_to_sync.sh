@@ -2,19 +2,23 @@
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
 
-lines=$1
-regionfile=$2
-
-region=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$regionfile")
+lines=$1 # Number of unique IDs
+qname=$2 # File containing IDs
+S=$3 # Path to sample .mpileup file
+A=$4 # Number of alleles in sample
+namebase=$5 # Current name base for sample
+temp=$6 # Directory for temporary files
+sampledir=$7 # Sample specific directory within data directory
+keep_temp=$8 # Flag for whether or not temporary files should be kept
 
 # Function to make sync file from mpileup
 create_sync()
 {
     perl /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/popoolation2_v1.201/mpileup2sync.pl \
-    --input /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_filtered_"$num".mpileup \
+    --input "$temp"/"$namebase"_filtered_"$num".mpileup \
     --fastq-type sanger \
     --min-qual 1 \
-    --output /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_"$num".sync
+    --output "$temp"/"$namebase"_"$num".sync
 }
 
 # Adjusts naming according to file number
@@ -43,6 +47,9 @@ else
     
 fi
 
-# rm -f /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_filtered_"$num".mpileup
+if [ "$keep_temp" == "N" ]; then
+    rm -f "$temp"/"$namebase"_filtered_"$num".mpileup
+fi 
+
 
 exit 0

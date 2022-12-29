@@ -11,7 +11,7 @@ temp=$6 # Directory for temporary files
 sampledir=$7 # Sample specific directory within data directory
 keep_temp=$8 # Flag for whether or not temporary files should be kept
 
-filelist="$temp"/"$namebase"_sync_filelist.txt
+filelist="$temp"/"$namebase"_filtered_sync_filelist.txt
 touch "$filelist"
 
 # Adjusts naming according to file number
@@ -31,29 +31,28 @@ for (( i=1; i<="$lines"; i++ )); do
         done
 
         num="$num$i"
-        echo "$temp"/"$namebase"_"$num".sync >> "$filelist"
+        echo "$temp"/"$namebase"_filtered_"$num".sync >> "$filelist"
 
     else
 
         num="$i"
-        echo "$temp"/"$namebase"_"$num".sync >> "$filelist"
+        echo "$temp"/"$namebase"_filtered_"$num".sync >> "$filelist"
         
     fi
 done
 
 sort -n -o "$filelist" "$filelist"
 
-touch "$sampledir"/"$namebase".sync
+touch "$sampledir"/"$namebase"_filtered.sync
 
 files=$(cat "$filelist")
 
 for file in $files; do
 
-    cat "$file" >> "$sampledir"/"$namebase".sync
+    cat "$file" >> "$sampledir"/"$namebase"_filtered.sync
 
     if [ "$keep_temp" == "N" ]; then
         rm -f "$file"
-        rm -f "$file".params
     fi 
 
 done

@@ -12,12 +12,9 @@ if [ "$USER" == "jepe" ]; then
 
 fi
 
-jellyfish count \
+jellyfish histo \
 -t 32 \
--C \
--m "${SLURM_ARRAY_TASK_ID}" \
--s 8G \
--o "$WD"/jellyfish_"$(basename "$target")"_"${SLURM_ARRAY_TASK_ID}" \
-<(zcat "$target")
+-o "$WD"/jellyfish_"$(basename "$target")"_histo_"${SLURM_ARRAY_TASK_ID}" \
+"$WD"/jellyfish_"$(basename "$target")"_"${SLURM_ARRAY_TASK_ID}"
 
 exit 0

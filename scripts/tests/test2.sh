@@ -8,10 +8,21 @@
 # awk '$4 >= 200' /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test2.txt
 
 # Removes empty .out files
-for file in /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/03_sfs/out/*; do
-    if [ ! -s "$file" ]; then
-        rm -f "$file"
-    fi
-done
+# for file in /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/03_sfs/out/*; do
+#     if [ ! -s "$file" ]; then
+#         rm -f "$file"
+#     fi
+# done
+
+jid1=
+
+sbatch \
+    --parsable \
+    --time=10 \
+    --mem-per-cpu=2G \
+    --cpus-per-task=1 \
+    --dependency=aftercorr:"$jid1" \
+    --output=test3.out \
+    /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test3.sh
 
 exit 0

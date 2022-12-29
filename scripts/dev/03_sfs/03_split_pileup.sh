@@ -2,22 +2,28 @@
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
 
-lines=$1
-regionfile=$2
+export LC_ALL=C
 
-region=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$regionfile")
+lines=$1 # Number of unique IDs
+qname=$2 # File containing IDs
+S=$3 # Path to sample .mpileup file
+A=$4 # Number of alleles in sample
+namebase=$5 # Current name base for sample
+temp=$6 # Directory for temporary files
+sampledir=$7 # Sample specific directory within data directory
+keep_temp=$8 # Flag for whether or not temporary files should be kept
+
+region=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$qname")
 
 # Function to split pileup file by scaffold
 split()
 {
-    parallel \
-    --pipepart \
-    --block -4 \
-    --jobs 4 \
-    -k \
-    -a /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup \
-    grep "$region" \
-    > /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_"$num".mpileup
+    rg \
+    -j 6 \
+    -F \
+    "$region" \
+    "$S" \
+    > "$temp"/"$namebase"_"$num".mpileup
 }
 
 # Adjusts naming according to file number

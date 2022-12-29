@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task 1
 #SBATCH --time 00:30:00
 
-adjustment=0.1
+# adjustment=0.1
 
 # number=$(awk -v adjustment=$adjustment 'BEGIN { printf "%.0f\n", ( 720 * adjustment) }')
 # number=$(awk -v adjustment=$adjustment 'BEGIN { print int( 720 * adjustment + 120) }')
@@ -67,9 +67,9 @@ adjustment=0.1
 #     fi
 # done
 
-env_path="$(dirname "$(dirname "$(dirname "$(which python)")")")"
+# env_path="$(dirname "$(dirname "$(dirname "$(which python)")")")"
 
-echo "$env_path/poolhmm"
+# echo "$env_path/poolhmm"
 
 # a="1"
 # b=${#a}
@@ -79,5 +79,22 @@ echo "$env_path/poolhmm"
 # else
 #     echo "$a"
 # fi
+
+timer()
+{
+    adjbase=$(awk -v adjustment="$1" -v base="$2" 'BEGIN { print int( base * adjustment ) }')
+	
+    if [ "$adjbase" -lt "$3" ]; then 
+        
+        awk -v adjbase="$adjbase" -v static="$3" 'BEGIN { print int( adjbase + static ) }'
+    
+    else
+
+        echo "$adjbase"
+    
+    fi
+}
+
+timer 4 0.5 2
 
 exit 0

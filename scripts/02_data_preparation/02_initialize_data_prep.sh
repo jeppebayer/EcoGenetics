@@ -71,7 +71,7 @@ EOF
 # Species specific sample directory, abosolute path
 SD=
 
-# Working directory, abosolute path
+# Working directory
 WD="$(readlink -f "$PWD")"
 
 # Algorithm to use during alignment: mem (>70MB, contemporary samples) [default] or aln (<70MB, historic samples)
@@ -89,7 +89,7 @@ single_sample="N"
 # Option to force run even if target sample directory contains .bam
 force_overwrite="N"
 
-# Name of data preparation directory
+# Name of created data directory under the working directory
 dataprep="02_data_preparation"
 
 # Gets path to script
@@ -260,9 +260,23 @@ sample_processing()
 }
 
 # Function used to adjust time for jobs
+# timer()
+# {
+# 	awk -v adjustment="$1" -v base="$2" -v static="$3" 'BEGIN { print int( base * adjustment + static) }'
+# }
 timer()
 {
-	awk -v adjustment="$1" -v base="$2" -v static="$3" 'BEGIN { print int( base * adjustment + static) }'
+    adjbase=$(awk -v adjustment="$1" -v base="$2" 'BEGIN { print int( base * adjustment ) }')
+	
+    if [ "$adjbase" -lt "$3" ]; then 
+        
+        awk -v adjbase="$adjbase" -v static="$3" 'BEGIN { print int( adjbase + static ) }'
+    
+    else
+
+        echo "$adjbase"
+    
+    fi
 }
 
 # Function used to queue jobs
@@ -539,7 +553,7 @@ done
 # Creates temp directory in working directory if none exist
 [[ -d "$WD"/temp ]] || mkdir -m 775 "$WD"/temp
 
-# Creates data preparation directory in working directory if none exist
+# Creates data directory in working directory if none exist
 [[ -d "$WD"/"$dataprep" ]] || mkdir -m 775 "$WD"/"$dataprep"
 
 # Creates species directory in data_preparation directory if none exist
