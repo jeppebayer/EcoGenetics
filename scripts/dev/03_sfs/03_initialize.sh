@@ -107,7 +107,7 @@ while getopts 's:a:d:fth' OPTION; do
 	    	;;
         a)
 	    	if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
-				A="$(readlink -f "$OPTARG")"
+				A="$OPTARG"
 	    	else
 				echo -e "\nERROR: $OPTARG is not an integer\n\nIf unsure of how to proceed run: $(basename "$script_path") -h\n"
 				exit 1
@@ -332,7 +332,7 @@ job5()
             jid5=$(sbatch \
                 --parsable \
                 --array=1-"$lines"%100 \
-                --time="$(timer "$adjustment" 600 240)" \
+                --time="$(timer "$adjustment" 180 180)" \
                 --mem-per-cpu=15G \
                 --cpus-per-task=4 \
                 --dependency=afterany:"$jid4" \
@@ -342,7 +342,7 @@ job5()
             jid5=$(sbatch \
                 --parsable \
                 --array=1-"$lines"%100 \
-                --time="$(timer "$adjustment" 600 240)" \
+                --time="$(timer "$adjustment" 180 180)" \
                 --mem-per-cpu=15G \
                 --cpus-per-task=4 \
                 --output="$out"/calculate_sfs-%a-%j-%A.out\
@@ -470,13 +470,13 @@ if [ ! -e "$qname" ]; then
 fi
 
 # Number of lines, eg. number of unique IDs
-lines=$(wc -l < "$qname")
+lines=$(wc -l <"$qname")
 
 # Function to Calculates time adjustment based on filesize and number of IDs comparative to .mpileup of Ocin_NYS-F
-filesize=$(wc -c < "$S")
+filesize=$(wc -c <"$S")
 sizeratio=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 234060585564) }')
 lineratio=$(awk -v lines="$lines" 'BEGIN { print ( 9402 / lines ) }')
-adjustment=$(awk -v sizeration="$sizeratio" -v lineratio="$lineratio" 'BEGIN { print ( sizeratio * lineratio ) }')
+adjustment=$(awk -v sizeratio="$sizeratio" -v lineratio="$lineratio" 'BEGIN { print ( sizeratio * lineratio ) }')
 
 # Checks whether to force owerwrite
 if [ "$force_overwrite" == "Y" ]; then

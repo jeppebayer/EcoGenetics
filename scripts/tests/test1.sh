@@ -5,39 +5,39 @@
 #SBATCH --cpus-per-task 1
 #SBATCH --time 00:30:00
 
-# Directory containing scripts (Do NOT end with '/')
-scripts="people/Jeppe_Bayer/scripts"
+# # Directory containing scripts (Do NOT end with '/')
+# scripts="people/Jeppe_Bayer/scripts"
 
-# Species specific reference genome (in FASTA format)
-RG="BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
+# # Species specific reference genome (in FASTA format)
+# RG="BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
-# Species specific sample directory (Do NOT end with '/')
-SD="BACKUP/population_genetics/collembola/Orchesella_cincta"
+# # Species specific sample directory (Do NOT end with '/')
+# SD="BACKUP/population_genetics/collembola/Orchesella_cincta"
 
-# Working directory (Do NOT end with '/')
-WD="people/Jeppe_Bayer/steps"
+# # Working directory (Do NOT end with '/')
+# WD="people/Jeppe_Bayer/steps"
 
-usage()
-{
-cat << EOF
+# usage()
+# {
+# cat << EOF
 
-Usage: 02_00_init_data_prep.sh [-r|--reference] <reference_genome> [-s|--species] <species_directory> [-d|--directory] <working_directory> [-a|--algorithm] <algorithm> [-h|--help]
+# Usage: 02_00_init_data_prep.sh [-r|--reference] <reference_genome> [-s|--species] <species_directory> [-d|--directory] <working_directory> [-a|--algorithm] <algorithm> [-h|--help]
 
-This script is used for initializing the standardized data preparation procedure for sequence data
+# This script is used for initializing the standardized data preparation procedure for sequence data
 
-PARAMETERS:
-    -r | --reference    Species specific reference genome, abosolute path (reference genome in FASTA format)
-    -s | --species      Species specific sample directory, abosolute path (Do NOT end with '/')
-    -d | --directory    Working directory, abosolute path (Do NOT end with '/')
+# PARAMETERS:
+#     -r | --reference    Species specific reference genome, abosolute path (reference genome in FASTA format)
+#     -s | --species      Species specific sample directory, abosolute path (Do NOT end with '/')
+#     -d | --directory    Working directory, abosolute path (Do NOT end with '/')
 
-OPTIONS:
-    -a | --algorithm    Choice of algorithm to be used during alignment. mem (>70MB, contemporary samples)[default] or aln (<70MB, historic samples)
-    -h | --help         Show this message
+# OPTIONS:
+#     -a | --algorithm    Choice of algorithm to be used during alignment. mem (>70MB, contemporary samples)[default] or aln (<70MB, historic samples)
+#     -h | --help         Show this message
 
-EOF
-}
+# EOF
+# }
 
-RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
+# RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1/GCA_001718145.1_ASM171814v1_genomic.fna"
 
 # for file in "$(dirname "$RG")"/*.gff; do
 #     gff=$file
@@ -71,21 +71,21 @@ RG="/home/jepe/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718
 
 # touch "$path"/testlog.txt
 
-# Algorithm to use during alignment: mem (>70MB, contemporary samples) [default] or aln (<70MB, historic samples)
-algo="mem"
+# # Algorithm to use during alignment: mem (>70MB, contemporary samples) [default] or aln (<70MB, historic samples)
+# algo="mem"
 
-# Define memory per cpu in G (must be integer)
-memory="8"
+# # Define memory per cpu in G (must be integer)
+# memory="8"
 
-# Define number of cpus to be used (must be integer)
-cpus="8"
+# # Define number of cpus to be used (must be integer)
+# cpus="8"
 
-all_variables=("$RG" "$SD" "$WD" "$algo" "$memory" "$cpus")
+# all_variables=("$RG" "$SD" "$WD" "$algo" "$memory" "$cpus")
 
-for ref in /home/"$USER"/EcoGenetics/BACKUP/reference_genomes/"$(basename "$SD")"/*.fna; do
-    RG=$ref
-    break
-done
+# for ref in /home/"$USER"/EcoGenetics/BACKUP/reference_genomes/"$(basename "$SD")"/*.fna; do
+#     RG=$ref
+#     break
+# done
 
 # AdapterRemoval
 # jid1=$(sbatch --parsable "$path"/test2.sh > "$path"/testlog.txt)
@@ -94,29 +94,47 @@ done
 # sbatch /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh "${all_variables[@]}"
 # sbatch /home/jepe/EcoGenetics/people/Jeppe_Bayer/scripts/test3.sh "$RG"
 
-queue()
-{
-cat << EOF
-#!/bin/bash
-#SBATCH --account EcoGenetics
-#SBATCH --partition normal
-#SBATCH --mem-per-cpu $1G
-#SBATCH --cpus-per-task $2
-#SBATCH --time 00:30:00
-#SBATCH --output=isit3.out
+# queue()
+# {
+# cat << EOF
+# #!/bin/bash
+# #SBATCH --account EcoGenetics
+# #SBATCH --partition normal
+# #SBATCH --mem-per-cpu $1G
+# #SBATCH --cpus-per-task $2
+# #SBATCH --time 00:30:00
+# #SBATCH --output=isit3.out
 
-echo "Hello"
+# echo "Hello"
 
-exit 0
-EOF
-}
+# exit 0
+# EOF
+# }
 
-SD="this/path/is/no/good/"
+# SD="this/path/is/no/good/"
 
-if [ "${SD: -1}" == "/" ]; then
-    SD=${SD:0:((${#SD} - 1))}
+# if [ "${SD: -1}" == "/" ]; then
+#     SD=${SD:0:((${#SD} - 1))}
+# fi
+
+# echo $SD
+
+lines=$(wc -l <people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_qname.txt)
+echo "$lines"
+filesize=$(wc -c <BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup)
+echo "$filesize"
+sizeratio=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 234060585564) }')
+echo "$sizeratio"
+lineratio=$(awk -v lines="$lines" 'BEGIN { print ( 9402 / lines ) }')
+echo "$lineratio"
+adjustment=$(awk -v sizeratio="$sizeratio" -v lineratio="$lineratio" 'BEGIN { print ( sizeratio * lineratio ) }')
+echo "$adjustment"
+adjbase=$(awk -v adjustment="$adjustment" 'BEGIN { print int( 600 * adjustment ) }')
+echo "$adjbase"
+if [ "$adjbase" -lt 240 ]; then 
+    awk -v adjbase="$adjbase" 'BEGIN { print int( adjbase + 240 ) }'
+else
+    echo "$adjbase"
 fi
-
-echo $SD
 
 exit 0
