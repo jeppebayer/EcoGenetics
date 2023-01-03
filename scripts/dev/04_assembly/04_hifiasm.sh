@@ -3,8 +3,8 @@
 #SBATCH --partition normal
 #SBATCH --mem-per-cpu 15G
 #SBATCH --cpus-per-task 32
-#SBATCH --time 10:00:00
-#SBATCH --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/Lela_hifiasm-%j.out
+#SBATCH --time 03:00:00
+#SBATCH --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Enic_hifiasm-%j.out
 
 if [ "$USER" == "jepe" ]; then
 
@@ -15,10 +15,18 @@ if [ "$USER" == "jepe" ]; then
 
 fi
 
+target="$(readlink -f "$1")"
+WD="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly"
+name=$(basename "$target")
+firstletter=${name:0:1}
+nextletters=$(awk '{print tolower("${name:1:4}")}')
+
 hifiasm \
--o /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Lepidocyrtus_sp/Lela.asm \
+-o "$WD"/"$(basename "$(dirname "$target")")"/"$firstletter""$nextletters".asm \
 -t 32 \
--k 27
-/faststorage/project/EcoGenetics/BACKUP/PacBio_HiFi/Lepidocyrtus_sp/LELA_m64101e_221212_121647.hifi_reads.fastq.gz
+--hom-cov 70 \
+-s 0.1 \
+-l 3 \
+"$target"
 
 exit 0

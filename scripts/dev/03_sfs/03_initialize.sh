@@ -247,7 +247,7 @@ job2()
         if [ -n "$jid1" ];then
             jid2=$(sbatch \
                 --parsable \
-                --array=1-"$lines"%100 \
+                --array=1-"$lines"%200 \
                 --time="$(timer "$adjustment" 180 60)" \
                 --mem-per-cpu=10G \
                 --cpus-per-task=2 \
@@ -257,7 +257,7 @@ job2()
         else
             jid2=$(sbatch \
                 --parsable \
-                --array=1-"$lines"%100 \
+                --array=1-"$lines"%200 \
                 --time="$(timer "$adjustment" 180 60)" \
                 --mem-per-cpu=10G \
                 --cpus-per-task=2 \

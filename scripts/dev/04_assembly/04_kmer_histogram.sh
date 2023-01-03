@@ -7,7 +7,9 @@ WD=$2
 
 if [ "$USER" == "jepe" ]; then
 
+    # shellcheck disable=1090
     source /home/"$USER"/.bashrc
+    # shellcheck disable=1091
     source activate genome_assembly
 
 fi

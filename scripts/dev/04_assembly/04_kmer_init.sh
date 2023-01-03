@@ -15,11 +15,11 @@ if [ "$USER" == "jepe" ]; then
 
 fi
 
-target="/faststorage/project/EcoGenetics/BACKUP/PacBio_HiFi/Entomobrya_nicoleti/ENIC21_m64101e_221211_025112.hifi_reads.fastq.gz"
+target="$(readlink -f "$1")"
 
 temp="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/temp"
 scripts="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/dev/04_assembly"
-WD="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/$(basename "$(dirname "$target")")"
+WD="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/$(basename "$(dirname "$target")")/kmer"
 out="$WD"/out
 
 [ -d "$temp" ] || mkdir -m 775 "$temp"
@@ -28,7 +28,7 @@ out="$WD"/out
 
 jid1=$(sbatch \
     --parsable \
-    --array=5-39:2 \
+    --array="$2" \
     --time=40 \
     --mem-per-cpu=15G \
     --cpus-per-task=32 \
@@ -37,7 +37,7 @@ jid1=$(sbatch \
 
 jid2=$(sbatch \
     --parsable \
-    --array=5-39:2 \
+    --array="$2" \
     --time=30 \
     --mem-per-cpu=15G \
     --cpus-per-task=32 \
@@ -47,12 +47,12 @@ jid2=$(sbatch \
 
 jid3=$(sbatch \
     --parsable \
-    --array=5-39:2\
+    --array="$2"\
     --time=30 \
     --mem-per-cpu=10G \
-    --cpus-per-task=4 \
+    --cpus-per-task=2 \
     --dependency=aftercorr:"$jid2" \
-    --output="$out"/kmer_plot_hold-%a-%j.out \
-    "$scripts"/04_kmer_plot_hold.sh "$target" "$WD")
+    --output="$out"/genomescope-%a-%j.out \
+    "$scripts"/04_genomescope.sh "$target" "$WD")
 
 exit 0
