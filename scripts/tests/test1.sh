@@ -119,22 +119,29 @@
 
 # echo $SD
 
-lines=$(wc -l <people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_qname.txt)
-echo "$lines"
-filesize=$(wc -c <BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup)
-echo "$filesize"
-sizeratio=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 234060585564) }')
-echo "$sizeratio"
-lineratio=$(awk -v lines="$lines" 'BEGIN { print ( 9402 / lines ) }')
-echo "$lineratio"
-adjustment=$(awk -v sizeratio="$sizeratio" -v lineratio="$lineratio" 'BEGIN { print ( sizeratio * lineratio ) }')
-echo "$adjustment"
-adjbase=$(awk -v adjustment="$adjustment" 'BEGIN { print int( 600 * adjustment ) }')
-echo "$adjbase"
-if [ "$adjbase" -lt 240 ]; then 
-    awk -v adjbase="$adjbase" 'BEGIN { print int( adjbase + 240 ) }'
-else
-    echo "$adjbase"
-fi
+# lines=$(wc -l <people/Jeppe_Bayer/steps/temp/Ocin_NYS-F_qname.txt)
+# echo "$lines"
+# filesize=$(wc -c <BACKUP/population_genetics/collembola/Orchesella_cincta/Ocin_NYS-F/Ocin_NYS-F.pileup)
+# echo "$filesize"
+# sizeratio=$(awk -v filesize="$filesize" 'BEGIN { print ( filesize / 234060585564) }')
+# echo "$sizeratio"
+# lineratio=$(awk -v lines="$lines" 'BEGIN { print ( 9402 / lines ) }')
+# echo "$lineratio"
+# adjustment=$(awk -v sizeratio="$sizeratio" -v lineratio="$lineratio" 'BEGIN { print ( sizeratio * lineratio ) }')
+# echo "$adjustment"
+# adjbase=$(awk -v adjustment="$adjustment" 'BEGIN { print int( 600 * adjustment ) }')
+# echo "$adjbase"
+# if [ "$adjbase" -lt 240 ]; then 
+#     awk -v adjbase="$adjbase" 'BEGIN { print int( adjbase + 240 ) }'
+# else
+#     echo "$adjbase"
+# fi
+
+target="BACKUP/PacBio_HiFi/Entomobrya_nicoleti/ENIC21_m64101e_221211_025112.hifi_reads.fastq.gz"
+name=$(basename "$target")
+firstletter=${name:0:1}
+nextletters="${name:1:3}"
+lowerletters="${nextletters,,}"
+echo "$firstletter$lowerletters"
 
 exit 0

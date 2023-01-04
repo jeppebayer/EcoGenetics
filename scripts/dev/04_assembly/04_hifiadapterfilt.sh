@@ -15,6 +15,9 @@ if [ "$USER" == "jepe" ]; then
 
 fi
 
+export PATH=$PATH:/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/HiFiAdapterFilt
+export PATH=$PATH:/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/HiFiAdapterFilt/DB
+
 # in_file="$(readlink -f "$1")"
 # WD="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly"
 

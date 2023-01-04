@@ -3,8 +3,8 @@
 #SBATCH --partition normal
 #SBATCH --mem-per-cpu 15G
 #SBATCH --cpus-per-task 32
-#SBATCH --time 03:00:00
-#SBATCH --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Enic_hifiasm-%j.out
+#SBATCH --time 10:00:00
+#SBATCH --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/hifiasm-%j.out
 
 if [ "$USER" == "jepe" ]; then
 
@@ -19,12 +19,12 @@ target="$(readlink -f "$1")"
 WD="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly"
 name=$(basename "$target")
 firstletter=${name:0:1}
-nextletters=$(awk '{print tolower("${name:1:4}")}')
+nextletters="${name:1:3}"
+lowerletters="${nextletters,,}"
 
 hifiasm \
--o "$WD"/"$(basename "$(dirname "$target")")"/"$firstletter""$nextletters".asm \
+-o "$WD"/"$(basename "$(dirname "$target")")"/"$firstletter""$lowerletters".asm \
 -t 32 \
---hom-cov 70 \
 -s 0.1 \
 -l 3 \
 "$target"
