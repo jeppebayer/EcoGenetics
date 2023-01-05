@@ -137,11 +137,26 @@
 #     echo "$adjbase"
 # fi
 
-target="BACKUP/PacBio_HiFi/Entomobrya_nicoleti/ENIC21_m64101e_221211_025112.hifi_reads.fastq.gz"
-name=$(basename "$target")
-firstletter=${name:0:1}
-nextletters="${name:1:3}"
-lowerletters="${nextletters,,}"
-echo "$firstletter$lowerletters"
+# target="BACKUP/PacBio_HiFi/Entomobrya_nicoleti/ENIC21_m64101e_221211_025112.hifi_reads.fastq.gz"
+# name=$(basename "$target")
+# firstletter=${name:0:1}
+# nextletters="${name:1:3}"
+# lowerletters="${nextletters,,}"
+# echo "$firstletter$lowerletters"
+
+WD="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Isotoma_sp/purge_dups/01"
+
+# Creates files with all sequence lengths sorted longest to shortest
+bioawk \
+-v OFS='\t' \
+-c fastx \
+'{ print $name, length($seq) }' \
+"$WD"/purged.fa \
+| sort -k1,1 -k2,2nr \
+> "$WD"/sequence_lengths
+
+# Calculates total assembly length
+total=$(awk '{Total=Total+$2} END{print Total}' "$WD"/sequence_lengths)
+awk '{Total=Total+$2} END{print "Total assembly length is: " Total}' "$WD"/sequence_lengths > "$WD"/asm_lenght_"$total"
 
 exit 0

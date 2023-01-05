@@ -1,7 +1,8 @@
 #!/bin/bash
 
-target="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Entomobrya_nicoleti/ENIC21_m64101e_221211_025112.hifi_reads.filt.fastq.gz"
-ref="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Entomobrya_nicoleti/Enic.asm.bp.p_ctg.fasta"
+target="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Isotoma_sp/ISOSP_m64101e_221205_183109.hifi_reads.filt.fastq.gz"
+ref="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly/Isotoma_sp/purge_dups/02/purged.fa"
+round="03"
 
 WD="/faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/04_assembly"
 [ -d "$WD" ] || mkdir -m 775 "$WD"
@@ -10,6 +11,9 @@ WD="$WD/$(basename "$(dirname "$target")")"
 [ -d "$WD" ] || mkdir -m 775 "$WD"
 
 WD="$WD/purge_dups"
+[ -d "$WD" ] || mkdir -m 775 "$WD"
+
+WD="$WD/$round"
 [ -d "$WD" ] || mkdir -m 775 "$WD"
 
 out="$WD/out"
@@ -37,7 +41,7 @@ jid1=$(sbatch \
 
 jid2=$(sbatch \
     --parsable \
-    --time=180 \
+    --time=30 \
     --mem-per-cpu=10G \
     --cpus-per-task=2 \
     --dependency=afterany:"$jid1" \
@@ -46,7 +50,7 @@ jid2=$(sbatch \
 
 jid3=$(sbatch \
     --parsable \
-    --time=180 \
+    --time=30 \
     --mem-per-cpu=10G \
     --cpus-per-task=2 \
     --dependency=afterany:"$jid2" \
@@ -55,7 +59,7 @@ jid3=$(sbatch \
 
 jid4=$(sbatch \
     --parsable \
-    --time=180 \
+    --time=30 \
     --mem-per-cpu=10G \
     --cpus-per-task=2 \
     --dependency=afterany:"$jid3" \
@@ -64,7 +68,7 @@ jid4=$(sbatch \
 
 jid5=$(sbatch \
     --parsable \
-    --time=180 \
+    --time=60 \
     --mem-per-cpu=10G \
     --cpus-per-task=2 \
     --dependency=afterany:"$jid4" \
@@ -73,7 +77,7 @@ jid5=$(sbatch \
 
 jid6=$(sbatch \
     --parsable \
-    --time=120 \
+    --time=30 \
     --mem-per-cpu=10G \
     --cpus-per-task=15 \
     --dependency=afterany:"$jid5" \
@@ -82,7 +86,8 @@ jid6=$(sbatch \
 
 jid7=$(sbatch \
     --parsable \
-    --time=180 \
+    --chdir="$WD" \
+    --time=30 \
     --mem-per-cpu=10G \
     --cpus-per-task=2 \
     --dependency=afterany:"$jid6" \
