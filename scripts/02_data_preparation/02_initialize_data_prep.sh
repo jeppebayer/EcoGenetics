@@ -22,6 +22,15 @@
 # Tested and working using:
 # EcoGenetics/people/Jeppe_Bayer/environment_primary_from_history.yml
 
+if [ "$USER" == "jepe" ]; then
+
+    # shellcheck disable=1090
+    source /home/"$USER"/.bashrc
+    # shellcheck disable=1091
+    source activate ecogen_primary
+
+fi
+
 # ----------------- Usage ------------------------------------------------
 
 usage()
@@ -516,11 +525,11 @@ queue()
 	echo -e "\t'Post-filtering statistics (qualimap)' job has been submitted for $(basename "$sample") -- Job ID: $jid7_6\n" >> "$logfile"
 
 	# Clean up of empty stdout files
-	sbatch \
+	jid8=$(sbatch \
 		--output=/dev/null \
 		--error=/dev/null \
 		--dependency=afterany:"$jid7_1":"$jid7_2":"$jid7_3":"$jid7_4":"$jid7_5":"$jid7_6" \
-		"$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo"
+		"$script_path"/modules/02_08_cleanup.sh "$cpus" "$RG" "$SD" "$WD" "$sample" "$dataprep" "$algo")
 }
 
 # ----------------- Script Queue -----------------------------------------
@@ -529,9 +538,10 @@ queue()
 script_path=$(dirname "$script_path")
 
 # Finds references genome for designated species or exits if it cannot be found
-for ref in /faststorage/project/EcoGenetics/BACKUP/reference_genomes/"$(basename "$SD")"/*.fna; do
+shopt -s nullglob extglob
+for ref in /faststorage/project/EcoGenetics/BACKUP/reference_genomes/"$(basename "$SD")"/*.@(fna|fa|fasta); do
     if [ ! -e "$ref" ]; then
-		echo -e "\nCannot locate reference genome, $ref\n"
+		echo -e "\nCannot locate reference genome $ref, format: .fna, .fa, .fasta\n"
 		exit 1
     else
 		RG=$ref

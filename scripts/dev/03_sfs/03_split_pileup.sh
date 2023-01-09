@@ -52,4 +52,8 @@ else
     
 fi
 
+if [ "$keep_temp" == "N" ]; then
+    rm -f "$qname"
+fi 
+
 exit 0

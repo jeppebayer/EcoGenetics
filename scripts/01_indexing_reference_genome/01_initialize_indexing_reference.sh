@@ -6,6 +6,15 @@
 #SBATCH --time 00:40:00
 #SBATCH --output=Index_Reference_Genome-%j.out
 
+if [ "$USER" == "jepe" ]; then
+
+    # shellcheck disable=1090
+    source /home/"$USER"/.bashrc
+    # shellcheck disable=1091
+    source activate ecogen_primary
+
+fi
+
 # ----------------- Usage ------------------------------------------------
 
 usage()
@@ -20,10 +29,10 @@ Can be run on the frontend, as its resource-demands are fairly, or run in
 conjunction with 'sbatch'or 'srun'.
 
 OPTIONS:
-    -r  DIRECTORY       Directory containing reference genome
+    -r  FILE            Reference genome file
     -f                  Force run. Index reference genome even if it has been
                         indexed previously
-    -a                  Index all available reference genomes (Cannot be run -r)
+    -a                  Index all available reference genomes (Cannot be run with -r)
     -h                  Show this message
 
 Tested and working using:
@@ -54,7 +63,12 @@ fi
 while getopts 'r:fah' OPTION; do
     case "$OPTION" in
         r)
-            RGD="$(readlink -f "$OPTARG")"
+            if [ -f "$OPTARG" ]; then
+                RG="$(readlink -f "$OPTARG")"
+            else
+                echo -e "\n$OPTARG does not seem to be a file\n"
+                exit 1
+            fi
             ;;
         f)
             force_overwrite="Y"
@@ -73,24 +87,24 @@ while getopts 'r:fah' OPTION; do
     esac
 done
 
-# Removes "/" from the end of path for reference genome directory
-if [ "${RGD: -1}" == "/" ]; then
-    length=${#RGD}
-    RG=${RGD::length - 1}
-fi
+# # Removes "/" from the end of path for reference genome directory
+# if [ "${RGD: -1}" == "/" ]; then
+#     length=${#RGD}
+#     RG=${RGD::length - 1}
+# fi
 
 # ----------------- Functions --------------------------------------------
 queue()
 {
     # Index Reference
-	sbatch \
+	jid1=$(sbatch \
 		--parsable \
 		--time=120 \
 		--mem-per-cpu=16G \
 		--cpus-per-task=2 \
 		--output=/dev/null \
 		--error=/dev/null \
-		"$script_path"/modules/01_01_indexing_reference.sh "$RG"
+		"$script_path"/modules/01_01_indexing_reference.sh "$RG")
 }
 
 # ----------------- Script Queue -----------------------------------------
@@ -106,46 +120,32 @@ done
 # Check whether or not to run on all available reference genomes
 if [ "$run_all" == "N" ]; then
     
-    # Checks that folder contains .fna file
-    for fna in "$RGD"/*.fna; do
+    if [[ "$RG" == *.fna ]] || [[ "$RG" == *.fasta ]] || [[ "$RG" == *.fa ]]; then
 
-        if [ -e "$fna" ]; then
-
-            # Exit with error message if reference genome is indexed
-            for index in "$RGD"/*.ann; do
+        # Exit with error message if reference genome is indexed
+        for index in "$(dirname "$RG")"/*.ann; do
             
-                if [ -e "$index" ] && [ "$force_overwrite" == "N" ]; then
+            if [ -e "$index" ] && [ "$force_overwrite" == "N" ]; then
 
-                    echo -e "\nDesignated reference genome, $(basename "$RGD"), is already indexed\n"
-                    exit 1
+                echo -e "\nDesignated reference genome, $(basename "$RGD"), is already indexed\n"
+                exit 1
 
-                else
-
-                    for RG in "$RGD"/*.fna; do
+            else
                 
-                        queue
-                        break
-            
-                    done
-
+                queue
                 break
 
-                fi
+            fi
 
-            done
+        done
 
-            break
+    else
 
-        else
+        echo -e "\nDesignated reference genome, $(basename "$RG"), is not in .fna, .fa or .fasta format\n"
+        exit 1
+        
+    fi
 
-            echo -e "\n$RGD does not contain a .fna file\n"
-            exit 1
-
-        fi
-
-    done
-
-    
 else
 
     for RGD in /faststorage/project/EcoGenetics/BACKUP/reference_genomes/*; do

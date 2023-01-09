@@ -33,7 +33,7 @@ jid1=$(sbatch \
     --mem-per-cpu=15G \
     --cpus-per-task=32 \
     --output="$out"/kmer_genome_est-%a-%j.out \
-    "$scripts"/04_kmer_genome_size_estimation.sh "$target" "$WD")
+    "$scripts"/04_kmer_01_count.sh "$target" "$WD")
 
 jid2=$(sbatch \
     --parsable \
@@ -43,7 +43,7 @@ jid2=$(sbatch \
     --cpus-per-task=32 \
     --dependency=aftercorr:"$jid1" \
     --output="$out"/kmer_histogram-%a-%j.out \
-    "$scripts"/04_kmer_histogram.sh "$target" "$WD")
+    "$scripts"/04_kmer_02_histogram.sh "$target" "$WD")
 
 jid3=$(sbatch \
     --parsable \
@@ -53,6 +53,6 @@ jid3=$(sbatch \
     --cpus-per-task=2 \
     --dependency=aftercorr:"$jid2" \
     --output="$out"/genomescope-%a-%j.out \
-    "$scripts"/04_genomescope.sh "$target" "$WD")
+    "$scripts"/04_kmer_03_genomescope.sh "$target" "$WD")
 
 exit 0

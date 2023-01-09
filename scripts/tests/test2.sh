@@ -1,28 +1,16 @@
 #!/bin/bash
 #SBATCH --account EcoGenetics
 #SBATCH --partition normal
-#SBATCH --mem-per-cpu 10G
-#SBATCH --cpus-per-task 1
-#SBATCH --time 01:00:00
+#SBATCH --chdir=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/uniprot
+#SBATCH --mem-per-cpu 12G
+#SBATCH --cpus-per-task 2
+#SBATCH --time 10:00:00
+#SBATCH --output=/faststorage/project/EcoGenetics/people/Jeppe_Bayer/data/unzip_and_database-%j.out
 
-# awk '$4 >= 200' /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test2.txt
+# wget -q https://ftp.ebi.ac.uk/pub/databases/uniprot/knowledgebase/uniprot_trembl.fasta.gz
 
-# Removes empty .out files
-# for file in /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps/03_sfs/out/*; do
-#     if [ ! -s "$file" ]; then
-#         rm -f "$file"
-#     fi
-# done
+gzip -d uniprot_trembl.fasta.gz
 
-jid1=
-
-sbatch \
-    --parsable \
-    --time=10 \
-    --mem-per-cpu=2G \
-    --cpus-per-task=1 \
-    --dependency=aftercorr:"$jid1" \
-    --output=test3.out \
-    /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/tests/test3.sh
+diamond makedb --in uniprot_trembl.fasta -d uniprot_trembl
 
 exit 0
