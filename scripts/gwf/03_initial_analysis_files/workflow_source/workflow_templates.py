@@ -55,7 +55,7 @@ def create_vcf_per_chr_pooled(region, num, reference_genome, sample_list, repeat
     options = {
         'cores': 1,
         'memory': '100g',
-        'walltime': '10:00:00'
+        'walltime': '18:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -104,7 +104,7 @@ def create_vcf_per_chr_individual(region, num, reference_genome, sample_list, re
     options = {
         'cores': 1,
         'memory': '100g',
-        'walltime': '10:00:00'
+        'walltime': '18:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -167,13 +167,13 @@ def vcf_concat(regions, sample_name, temp_dir):
         --threads 8 \
         -o {temp_dir}/{sample_name}_prog.vcf \
         -O v \
-        ...
+        {regions}
     
     mv {temp_dir}/{sample_name}_prog.vcf {temp_dir}/{sample_name}.vcf
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(temp_dir=temp_dir, sample_name=sample_name)
+    """.format(temp_dir=temp_dir, sample_name=sample_name, regions=' '.join(inputs['regions']))
     return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
 
 def snpEff_annotation(temp_dir, work_dir, sample_name, snpEff_config, reference_genome_version):

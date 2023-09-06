@@ -70,7 +70,7 @@ def create_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
         gwf.target_from_template(
             name = 'VCF_concat_{}'.format(sample_name),
             template = vcf_concat(
-                regions = collect(vcf_per_chr_individual.outputs, ['region']),
+                regions = collect(vcf_per_chr_individual.outputs, ['region'])['regions'],
                 sample_name = sample_name,
                 temp_dir = temp_dir
             )
@@ -89,7 +89,7 @@ def create_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
         gwf.target_from_template(
             name = 'VCF_concat_{}'.format(sample_name),
             template = vcf_concat(
-                regions = collect(vcf_per_chr_pooled.outputs, ['region']),
+                regions = collect(vcf_per_chr_pooled.outputs, ['region'])['regions'],
                 sample_name = sample_name,
                 temp_dir = temp_dir
             )
