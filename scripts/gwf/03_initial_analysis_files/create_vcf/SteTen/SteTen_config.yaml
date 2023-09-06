@@ -1,0 +1,29 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being worked on.
+species_name: Stegodyphus tentoriicola
+# Path to sample alignment file (BAM format). Can be a list with multiple entries or a single entry
+sample_list:
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f1_81_F/SteTen_f1_81_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f1_86_M/SteTen_f1_86_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f2_82_F/SteTen_f2_82_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f2_87_M/SteTen_f2_87_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f3_83_F/SteTen_f3_83_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f3_88_M/SteTen_f3_88_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f4_84_F/SteTen_f4_84_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f4_89_M/SteTen_f4_89_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f5_85_F/SteTen_f5_85_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_tentoriicola/SteTen_f5_90_M/SteTen_f5_90_M_filtered.bam
+# Path to reference genome.
+reference_genome_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_tentoriicola/TENT_hifi_hic_scaffolded_trim.fa
+# Path to BED formatted file containing repeat regions
+repeat_regions_bed: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_tentoriicola/annotation/SteTen.repeats.bed
+# Directory for intermidiary files and various statistics.
+working_directory: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
+# What type of sequencing has been used on the samples, individual sequencing or pooled sequencing (individual | pooled)
+sequencing_type: individual
+# Ploidy of sample. If sample is pooled the value should equal the total number chromosome copies
+ploidy: 2
+# Freebayes is a haplotype-based variant caller. The value of 'bestn' is the max number of best alternative haplotypes to consider when more are available.
+# This is very time and memory intensive (don't use a value higher than 3).
+bestn: 3

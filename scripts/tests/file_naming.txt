@@ -1,0 +1,34 @@
+BACKUP (1)
+|__ populations_genetics (2)
+    |__ collembola (3)
+        |__ Orchesella_cincta (4)
+            |__ OrcCin_JHJ-C222 (5)
+                |__ V350160501_L03_519_1.fq.gz (6)
+                |__ V350160501_L03_519_2.fq.gz (6)
+
+Merging
+(6) ->  {output_dir}/{sample_name}_R{x}.concat.fq.gz
+        OrcCin_JHJ-C222_R1.concat.fq.gz
+
+AdapterRemoval
+{output_dir}/{sample_name}.pair1.truncated
+{output_dir}/{sample_name}.pair2.truncated
+{output_dir}/{sample_name}.all_collapsed
+OrcCin_JHJ-C222.pair1.truncated
+
+Alignment
+{output_dir}/{sample_name}.{read_type}.aligned.bam
+OrcCin_JHJ-C222.paired_end.aligned.bam
+OrcCin_JHJ-C222.single_end.aligned.bam
+
+Merge
+{output_dir}/{sample_name}.aligned.merged.bam
+OrcCin_JHJ-C222.aligned.merged.bam
+
+Markduplicates
+{alignment_noext}.markdup.bam
+OrcCin_JHJ-C222.aligned.merged.markdup.bam
+
+Unmapped
+{output_dir}/{alignment_name}.unmapped.bam
+OrcCin_JHJ-C222.aligned.merged.markdup.unmapped.bam

@@ -1,0 +1,15 @@
+name: repeatmasking
+channels:
+  - genomedk
+  - gwforg
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - ripgrep
+  - seqkit=2.3.1
+  - repeatmasker=4.1.2.p1
+  - bedtools=2.30.0
+  - repeatmodeler=2.0.3
+  - bioawk
+prefix: /home/jepe/miniconda3/envs/repeatmasking

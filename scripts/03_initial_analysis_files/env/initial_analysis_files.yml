@@ -1,0 +1,20 @@
+name: vcf
+channels:
+  - genomedk
+  - gwforg
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - freebayes=1.3.6
+  - snpeff=5.1
+  - snpsift=5.1
+  - bioawk
+  - ripgrep
+  - bedtools=2.30.0
+  - bcftools=1.16
+  - vcftools=0.1.16
+  - pandas
+  - agat=1.0.0
+  - rename=1.601
+prefix: /home/jepe/miniconda3/envs/vcf

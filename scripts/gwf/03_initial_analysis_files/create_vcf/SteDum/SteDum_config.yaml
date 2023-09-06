@@ -1,0 +1,29 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being worked on.
+species_name: Stegodyphus dumicola
+# Path to sample alignment file (BAM format). Can be a list with multiple entries or a single entry
+sample_list:
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f1_41_F/SteDum_f1_41_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f1_46_M/SteDum_f1_46_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f2_42_F/SteDum_f2_42_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f2_47_M/SteDum_f2_47_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f3_43_F/SteDum_f3_43_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f3_48_M/SteDum_f3_48_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f4_44_F/SteDum_f4_44_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f4_49_M/SteDum_f4_49_M_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f5_45_F/SteDum_f5_45_F_filtered.bam
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/individual_data/Stegodyphus_dumicola/SteDum_f5_50_M/SteDum_f5_50_M_filtered.bam
+# Path to reference genome.
+reference_genome_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_dumicola/DUM_hifi_hic_scaffolded_trim.fa
+# Path to BED formatted file containing repeat regions
+repeat_regions_bed: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_dumicola/annotation/SteDum.repeats.bed
+# Directory for intermidiary files and various statistics.
+working_directory: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
+# What type of sequencing has been used on the samples, individual sequencing or pooled sequencing (individual | pooled)
+sequencing_type: individual
+# Ploidy of sample. If sample is pooled the value should equal the total number chromosome copies
+ploidy: 2
+# Freebayes is a haplotype-based variant caller. The value of 'bestn' is the max number of best alternative haplotypes to consider when more are available.
+# This is very time and memory intensive (don't use a value higher than 3).
+bestn: 3

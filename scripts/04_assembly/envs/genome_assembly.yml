@@ -1,0 +1,22 @@
+name: genome_assembly
+channels:
+  - genomedk
+  - gwforg
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - 3d-dna=201008
+  - bwa=0.7.17
+  - pigz=2.6
+  - bamtools=2.5.2
+  - hifiasm=0.18.9
+  - jellyfish=2.2.10
+  - bioawk
+  - matplotlib
+  - purge_dups=1.2.6
+  - blast=2.13.0
+  - genomescope2=2.0
+  - minimap2=2.24
+  - pandas
+prefix: /home/jepe/miniconda3/envs/genome_assembly

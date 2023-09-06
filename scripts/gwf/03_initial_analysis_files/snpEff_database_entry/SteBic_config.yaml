@@ -1,0 +1,8 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being worked on.
+species_name: Stegodyphus bicolor
+# Path to reference genome.
+reference_genome: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_bicolor/BI_hifi_hic_scaffolded_trim.fa
+# Path to reference genome annotation file (.gtf | .gff)
+annotation_file: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_bicolor/annotation/SteBic.gene.gff3

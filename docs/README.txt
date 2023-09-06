@@ -1,0 +1,1 @@
+This folder is to contain documents connected to the NOTEBOOK and for each analysis performed.

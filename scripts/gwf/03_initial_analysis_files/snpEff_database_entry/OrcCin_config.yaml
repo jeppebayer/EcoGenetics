@@ -1,0 +1,8 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being worked on.
+species_name: Orchesella cincta
+# Path to reference genome.
+reference_genome: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna
+# Path to reference genome annotation file (.gtf | .gff)
+annotation_file: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/annotation/GCA_001718145.1_ASM171814v1_genomic.gtf

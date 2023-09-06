@@ -1,0 +1,14 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being analysed.
+species_name: Orchesella cincta
+# Path to directory containing individual subdirectories for samples.
+sample_path: /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta
+# Path to reference genome.
+reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna
+# Time period for sample, can be 'modern' (after 2020) or 'historic' (before 2020)
+time_period: modern
+# Directory for intermidiary files and various statistics.
+working_directory: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
+# Whether or not to include statistics (true | false)
+statistics: True

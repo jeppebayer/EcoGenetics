@@ -1,0 +1,6 @@
+Entomobryomorpha,#c8bf80
+Araneae,#011492
+Symphypleona,#01786f
+Sarcoptiformes,#3c4535
+Coleoptera,#c356fd
+Diptera,#e5a25e

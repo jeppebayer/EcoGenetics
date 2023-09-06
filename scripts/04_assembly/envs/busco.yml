@@ -1,0 +1,12 @@
+name: busco
+channels:
+  - genomedk
+  - gwforg
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - busco=5.4.5
+  - ripgrep
+  - bioawk
+prefix: /home/jepe/miniconda3/envs/busco

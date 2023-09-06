@@ -1,0 +1,16 @@
+name: blobtools
+channels:
+  - genomedk
+  - gwforg
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - blast=2.13.0
+  - bioawk
+  - minimap2=2.24
+  - diamond=2.1.4
+  - samtools=1.16.1
+  - ripgrep
+  - blobtools=1.1.1
+prefix: /home/jepe/miniconda3/envs/blobtools

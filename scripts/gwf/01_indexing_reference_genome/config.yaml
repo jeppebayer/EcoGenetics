@@ -1,0 +1,5 @@
+# The name of the relevent project account 
+account: EcoGenetics
+# Path to the reference genome(s). Can lead to a single reference genome
+# or use '*' to specify variable parts of the path to loop
+reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/*/*.fna

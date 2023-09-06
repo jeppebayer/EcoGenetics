@@ -1,0 +1,31 @@
+# Species   Availability
+# Collembola
+Entomobrya_nicoleti N
+Entomobrya_nivalis  N
+Lepidocyrtus_lanuginosus    N
+Lepidocyrtus_lignorum   N
+Orchesella_cincta   Y
+Orchesella_flavscens    N
+Orchesella_villosa  N
+Pogonognathellus_flavescens N
+
+# Beetles
+Apion_fulvipes  N
+Apion_virens    N
+Chaetocnema_hortensis   N
+Paradromius_linearis    N
+Sitona_lineatus N
+Stenus_fulvicornis  N
+Stenus_impressus    N
+Syntomus_truncatellus   N
+Tachyporus_hypnorum N
+Trichosirocalus_troglodytes N
+
+# Spiders
+Bathyphantes_gracilis   N
+Erigone_atra    N
+Microlinyphia_pusilla   N
+Oedothorac_fuscus   N
+Pachygnatha_degeeri N
+Pisaura_mirabilis   N
+Tenuiphantes_tenuis N

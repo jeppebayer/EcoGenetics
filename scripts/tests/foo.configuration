@@ -1,0 +1,15 @@
+#Configuration file for XXX.
+#Paths to files and folder can relative to the configuration file or absolute
+#Comments can be added by starting line with '#'
+
+>Species name:
+Orchesella cincta
+
+>Reference genome:
+BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna
+
+>Re-sequence data folder:
+BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_NYS-F
+
+>Working directory:
+people/Jeppe_Bayer/steps

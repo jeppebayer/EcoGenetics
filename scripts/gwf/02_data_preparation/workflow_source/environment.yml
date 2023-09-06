@@ -1,0 +1,19 @@
+name: data_prep
+channels:
+  - genomedk
+  - gwforg
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - adapterremoval=2.3.2
+  - qualimap=2.2.2d
+  - matplotlib
+  - ripgrep
+  - bioawk
+  - samtools=1.16.1
+  - perl
+  - pandas
+  - bwa=0.7.17
+  - gwf=2.0.2
+prefix: /home/jepe/miniconda3/envs/data_prep
