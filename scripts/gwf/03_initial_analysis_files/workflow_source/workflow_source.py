@@ -28,6 +28,9 @@ def create_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
     species_name_nospace = SPECIES_NAME.replace(' ', '_')
     # Creates a list of dictionaries where each dictionary contains the name of a region, start and end position for each segment within a region and its chronological number
     partitions = partition_chrom(parse_fasta(REFERENCE_GENOME))
+    # with open('test.txt', 'w') as tester:
+    #     for part in partitions:
+    #         tester.write(str(part) + '\n')
     # Takes the sample list and converts it into a multi-line string where each line was an entry in the list
     sample_string = ' -b '.join(SAMPLE_LIST)
     # Gets the path to snpEff config file

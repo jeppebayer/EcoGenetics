@@ -41,6 +41,7 @@ def partition_chrom(parse_fasta, size = 500000):
             start = end
             num += 1
         chrom_partition.append({'num': num, 'region': chrom['sequence_name'], 'start': start, 'end': start + partial_chunk})
+        # num += 1 # Forgot this initially
     return chrom_partition
 
 def name_vcf(idx, target):
@@ -49,6 +50,7 @@ def name_vcf(idx, target):
 
 def create_vcf_per_chr_pooled(region, num, reference_genome, sample_list, repeat_regions, temp_dir, sample_name, start: int, end: int, ploidy = 100, bestn = 3):
     """Template for creating a VCF file for each 'chromosome' in a pooled sample BAM"""
+    check_vcf = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/check_vcf_entry.py'
     inputs = {'region': [reference_genome,
               repeat_regions]}
     outputs = {'region': '{temp_dir}/{num}_{sample_name}_{region}.bcf'.format(region=region, num=num, temp_dir=temp_dir, sample_name=sample_name)}
@@ -68,56 +70,7 @@ def create_vcf_per_chr_pooled(region, num, reference_genome, sample_list, repeat
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
 
-    freebayes \
-        -f {reference_genome} \
-        -n {bestn} \
-        -p {ploidy} \
-        -r {region}:{start}-{end} \
-        --min-alternate-fraction 0 \
-        --min-alternate-count 2 \
-        --report-monomorphic \
-        --pooled-discrete  \
-        -b {sample_list} \
-    | SnpSift intervals \
-        -x \
-        {repeat_regions} \
-    | bcftools filter \
-        --SnpGap 5 \
-        -O u \
-    | bcftools filter \
-        -e 'TYPE~"del" || TYPE~"ins" || TYPE~"complex"' \
-        -O u \
-        > {temp_dir}/{num}_{sample_name}_{region}_prog.bcf
-    
-    mv {temp_dir}/{num}_{sample_name}_{region}_prog.bcf {num}_{sample_name}_{region}.bcf
-
-    echo "END: $(date)"
-    echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(reference_genome=reference_genome, bestn=bestn, ploidy=ploidy, region=region, sample_list=sample_list, repeat_regions=repeat_regions, num=num, temp_dir=temp_dir, sample_name=sample_name, start=start, end=end)
-    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
-
-def create_vcf_per_chr_individual(region, num, reference_genome, sample_list, repeat_regions, temp_dir, sample_name, start: int, end: int, ploidy = 2, bestn = 3):
-    """Template for creating a VCF file for each 'chromosome' in a individual sample BAM"""
-    inputs = {'region': [reference_genome,
-              repeat_regions]}
-    outputs = {'region': '{temp_dir}/{num}_{sample_name}_{region}.bcf'.format(region=region, num=num, temp_dir=temp_dir, sample_name=sample_name)}
-    options = {
-        'cores': 1,
-        'memory': '100g',
-        'walltime': '18:00:00'
-    }
-    spec = """
-    if [ "$USER" == "jepe" ]; then
-        source /home/"$USER"/.bashrc
-        source activate vcf
-    fi
-
-    export _JAVA_OPTIONS="-Xms100G -Xmx100G"
-    
-    echo "START: $(date)"
-    echo "JobID: $SLURM_JOBID"
-    
-    freebayes \
+    check=$(freebayes \
         -f {reference_genome} \
         -n {bestn} \
         -p {ploidy} \
@@ -126,33 +79,139 @@ def create_vcf_per_chr_individual(region, num, reference_genome, sample_list, re
         --min-alternate-count 2 \
         --report-monomorphic \
         -b {sample_list} \
-    | SnpSift intervals \
-        -x \
-        {repeat_regions} \
-    | bcftools filter \
-        --SnpGap 5 \
+    | {check_vcf})
+
+    if [ "$check" -eq 1 ]; then
+        freebayes \
+            -f {reference_genome} \
+            -n {bestn} \
+            -p {ploidy} \
+            -r {region}:{start}-{end} \
+            --min-alternate-fraction 0 \
+            --min-alternate-count 2 \
+            --report-monomorphic \
+            --pooled-discrete  \
+            -b {sample_list} \
+        | SnpSift intervals \
+            -x \
+            {repeat_regions} \
+        | bcftools filter \
+            --SnpGap 5 \
+            -O u \
+            - \
+        | bcftools filter \
+            -e 'TYPE~"del" || TYPE~"ins" || TYPE~"complex"' \
+            -O u \
+            - \
+            > {temp_dir}/{num}_{sample_name}_{region}_prog.bcf
+    else
+        freebayes \
+            -f {reference_genome} \
+            -n {bestn} \
+            -p {ploidy} \
+            -r {region}:{start}-{end} \
+            --min-alternate-fraction 0.05 \
+            --min-alternate-count 2 \
+            --report-monomorphic \
+            -b {sample_list} \
+        | bcftools view \
         -O u \
-    | bcftools filter \
-        -e 'INFO/TYPE~"del" || INFO/TYPE~"ins" || INFO/TYPE~"complex"' \
+        >{temp_dir}/{num}_{sample_name}_{region}_prog.bcf
+    fi
+    
+    mv {temp_dir}/{num}_{sample_name}_{region}_prog.bcf {num}_{sample_name}_{region}.bcf
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(reference_genome=reference_genome, bestn=bestn, ploidy=ploidy, region=region, sample_list=sample_list, repeat_regions=repeat_regions, num=num, temp_dir=temp_dir, sample_name=sample_name, start=start, end=end, check_vcf=check_vcf)
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def create_vcf_per_chr_individual(region, num, reference_genome, sample_list, repeat_regions, temp_dir, sample_name, start: int, end: int, ploidy = 2, bestn = 3):
+    """Template for creating a VCF file for each 'chromosome' in a individual sample BAM"""
+    check_vcf = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/check_vcf_entry.py'
+    inputs = {'region': [reference_genome,
+              repeat_regions]}
+    outputs = {'region': '{temp_dir}/{num}_{sample_name}_{region}.bcf'.format(region=region, num=num, temp_dir=temp_dir, sample_name=sample_name)}
+    options = {
+        'cores': 1,
+        'memory': '100g',
+        'walltime': '18:00:00'
+    }
+    spec = """
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+
+    export _JAVA_OPTIONS="-Xms100G -Xmx100G"
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    check=$(freebayes \
+        -f {reference_genome} \
+        -n {bestn} \
+        -p {ploidy} \
+        -r {region}:{start}-{end} \
+        --min-alternate-fraction 0.05 \
+        --min-alternate-count 2 \
+        --report-monomorphic \
+        -b {sample_list} \
+    | {check_vcf})
+
+    if [ "$check" -eq 1 ]; then
+        freebayes \
+            -f {reference_genome} \
+            -n {bestn} \
+            -p {ploidy} \
+            -r {region}:{start}-{end} \
+            --min-alternate-fraction 0.05 \
+            --min-alternate-count 2 \
+            --report-monomorphic \
+            -b {sample_list} \
+        | SnpSift intervals \
+            -x \
+            {repeat_regions} \
+        | bcftools filter \
+            --SnpGap 5 \
+            -O u \
+            - \
+        | bcftools filter \
+            -e 'INFO/TYPE~"del" || INFO/TYPE~"ins" || INFO/TYPE~"complex"' \
+            -O u \
+            - \
+            > {temp_dir}/{num}_{sample_name}_{region}_prog.bcf
+    else
+        freebayes \
+            -f {reference_genome} \
+            -n {bestn} \
+            -p {ploidy} \
+            -r {region}:{start}-{end} \
+            --min-alternate-fraction 0.05 \
+            --min-alternate-count 2 \
+            --report-monomorphic \
+            -b {sample_list} \
+        | bcftools view \
         -O u \
-        > {temp_dir}/{num}_{sample_name}_{region}_prog.bcf
+        >{temp_dir}/{num}_{sample_name}_{region}_prog.bcf
+    fi
     
     mv {temp_dir}/{num}_{sample_name}_{region}_prog.bcf {temp_dir}/{num}_{sample_name}_{region}.bcf
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(reference_genome=reference_genome, bestn=bestn, ploidy=ploidy, region=region, sample_list=sample_list, repeat_regions=repeat_regions, num=num, temp_dir=temp_dir, sample_name=sample_name, start=start, end=end)
+    """.format(reference_genome=reference_genome, bestn=bestn, ploidy=ploidy, region=region, sample_list=sample_list, repeat_regions=repeat_regions, num=num, temp_dir=temp_dir, sample_name=sample_name, start=start, end=end, check_vcf=check_vcf)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def vcf_concat(regions, sample_name, temp_dir):
     """Template for concatenating VCF parts into one VCF file."""
     inputs = {'regions': regions}
     outputs = {'concatenated_vcf': '{temp_dir}/{sample_name}.vcf'.format(temp_dir=temp_dir, sample_name=sample_name)}
-    protect = ['concatenated_vcf']
+    protect = [outputs['concatenated_vcf']]
     options = {
         'cores': 8,
         'memory': '96g',
-        'walltime': '03:00:00'
+        'walltime': '05:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -207,57 +266,4 @@ def snpEff_annotation(temp_dir, work_dir, sample_name, snpEff_config, reference_
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """.format(temp_dir=temp_dir, work_dir=work_dir, sample_name=sample_name, reference_genome_version=reference_genome_version, snpEff_config=snpEff_config)
-    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
-
-def file_specification(work_dir, config_file, account, species_name, reference_genome, sample_list, repeat_regions, sequencing_type, bestn, ploidy, snpEff_config, reference_genome_version):
-    """Template for creating text file with specification of the creation of VCF file"""
-    inputs = [config_file]
-    outputs = {'spec_file': '{work_dir}/{species_abbr}_vcf_specs.txt'.format(work_dir=work_dir, species_abbr=species_abbreviation(species_name))}
-    options = {
-        'cores':  1,
-        'memory':  '8g',
-        'walltime':  '00:10:00'
-    }
-    spec = """
-    echo -n "" > {work_dir}/specs.txt
-    echo "$(date +%d-%m-%Y)" >> {work_dir}/specs.txt
-    echo "Account: {account}"  >> {work_dir}/specs.txt
-    echo "Species: {species_name} ({species_abbr})" >> {work_dir}/specs.txt
-    echo "Samples:"  >> {work_dir}/specs.txt
-    for sample in {sample_list}; do
-        echo -e "\t$sample" >> {work_dir}/specs.txt
-    done
-    echo "Reference genome: {reference_genome}" >> {work_dir}/specs.txt
-    echo "Repeat region: {repeat_regions}" >> {work_dir}/specs.txt
-    echo "Sequencing type_ {sequencing_type}" >> {work_dir}/specs.txt
-    echo "" >> {work_dir}/specs.txt
-    if [ {sequencing_type} == "individual" ]; then
-        echo "freebayes" >> {work_dir}/specs.txt
-        echo -e "\t'--use-best-n-alleles': {bestn}" >> {work_dir}/specs.txt
-        echo -e "\t'--ploidy': {ploidy}" >> {work_dir}/specs.txt
-        echo -e "\t'--min-alternate-fraction': 0.05" >> {work_dir}/specs.txt
-        echo -e "\t'--min-alternate-count': 2" >> {work_dir}/specs.txt
-        echo -e "\t'--report-monomorphic': TRUE" >> {work_dir}/specs.txt
-    elif [ {sequencing_type} == "pooled" ]; then
-        echo "freebayes" >> {work_dir}/specs.txt
-        echo -e "\t'--use-best-n-alleles': {bestn}" >> {work_dir}/specs.txt
-        echo -e "\t'--ploidy': {ploidy}" >> {work_dir}/specs.txt
-        echo -e "\t'--min-alternate-fraction': 0" >> {work_dir}/specs.txt
-        echo -e "\t'--min-alternate-count': 2" >> {work_dir}/specs.txt
-        echo -e "\t'--report-monomorphic': TRUE" >> {work_dir}/specs.txt
-    fi
-    echo "" >> {work_dir}/specs.txt
-    echo "SnpSift intervals" >> {work_dir}/specs.txt
-    echo -e "\t'-x': {repeat_regions}" >> {work_dir}/specs.txt
-    echo ""  >> {work_dir}/specs.txt
-    echo "bcftools filter"
-    echo -e "\t'--SnpGap': 5" >> {work_dir}/specs.txt
-    echo "" >> {work_dir}/specs.txt
-    echo "bcftools filter" >> {work_dir}/specs.txt
-    echo -e "\t'-e': INFO/TYPE~'del' || INFO/TYPE~'ins' || INFO/TYPE~'complex'" >> {work_dir}/specs.txt
-    echo "" >> {work_dir}/specs.txt
-    echo "snpEff ann" >> {work_dir}/specs.txt
-    echo -e "\t'-c': {snpEff_config}" >> {work_dir}/specs.txt
-    echo -e "\t'Reference genome version': {reference_genome_version}" >> {work_dir}/specs.txt
-    """.format(work_dir=work_dir, account=account, species_name=species_name, species_abbr=species_abbreviation(species_name), reference_genome=reference_genome, repeat_regions=repeat_regions, sample_list=sample_list, sequencing_type=sequencing_type, bestn=bestn, ploidy=ploidy, snpEff_config=snpEff_config, reference_genome_version=reference_genome_version)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
