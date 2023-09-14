@@ -14,6 +14,13 @@ if [ "$USER" == "jepe" ]; then
     source activate data_prep
 fi
 
+# Checks naming format of reference index and tires to match
+if [ -e "$RG".ann ]; then
+    idx="$RG"
+else
+    idx="${RG%.*}"
+fi
+
 # If sample is identified as historic uses custom value for -l (seedLen), -n (maxDiff), and -o (maxGapO)
 if [ "$age" == " historic" ]; then
     # Gets Suffix Array coordinates for input reads
@@ -22,7 +29,7 @@ if [ "$age" == " historic" ]; then
     -n 0.01 \
     -o 2 \
     -f "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.sai \
-    "${RG%.*}" \
+    "$idx" \
     "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated
 
     bwa "$algo" -t 8 \
@@ -30,13 +37,13 @@ if [ "$age" == " historic" ]; then
     -n 0.01 \
     -o 2 \
     -f "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.sai \
-    "${RG%.*}" \
+    "$idx" \
     "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated
 
     # Generate alignments
     bwa sampe \
     -r "@RG\tID:$(basename "$sample")\tSM:$(basename "$sample")" \
-    "${RG%.*}" \
+    "$idx" \
     "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.sai \
     "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.sai \
     "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
@@ -62,7 +69,7 @@ else
         # Align sample to reference genome
         bwa "$algo" -t 8 \
         -R "@RG\tID:$(basename "$sample")\tSM:$(basename "$sample")" \
-        "${RG%.*}" \
+        "$idx" \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated \
         | \
@@ -86,7 +93,7 @@ else
         -n 0.01 \
         -o 2 \
         -f "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.sai \
-        "${RG%.*}" \
+        "$idx" \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated
 
         bwa "$algo" -t 8 \
@@ -94,13 +101,13 @@ else
         -n 0.01 \
         -o 2 \
         -f "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.sai \
-        "${RG%.*}" \
+        "$idx" \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.truncated
 
         # Generate alignments
         bwa sampe \
         -r "@RG\tID:$(basename "$sample")\tSM:$(basename "$sample")" \
-        "${RG%.*}" \
+        "$idx" \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.sai \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair2.sai \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.pair1.truncated \

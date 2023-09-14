@@ -306,6 +306,7 @@ job1(){
 }
 
 job23(){
+    echo "$(basename "$sample") is sent to the queue as a single-end$age sample" >> "$logfile"
     jobidlist[23]=$(sbatch \
                 --parsable \
                 --account=EcoGenetics \
@@ -688,7 +689,7 @@ sample_processing(){
 queue(){
 	for _2 in "$sample"/*_2.fq.gz; do
         if [ ! -e "$_2" ]; then
-            count=$(find "$sample"/ -maxdepth 1 -type f -name '*_1.fq.gz' | wc -l)
+            count=$(find -L "$sample"/ -maxdepth 1 -type f -name '*_1.fq.gz' | wc -l)
             # Single-end
             if [ $((count)) -eq 1 ]; then
                 # AdapterRemoval
@@ -708,7 +709,7 @@ queue(){
             # Executes job if indicated in joblist
             [ "${joblist[8]}" = true ] && job8
         else
-            count=$(find "$sample"/ -maxdepth 1 -type f -name '*_2.fq.gz' | wc -l)
+            count=$(find -L "$sample"/ -maxdepth 1 -type f -name '*_2.fq.gz' | wc -l)
             # Paired-end
             if [ $((count)) -eq 1 ]; then
                 # AdapterRemoval

@@ -14,6 +14,13 @@ if [ "$USER" == "jepe" ]; then
     source activate data_prep
 fi
 
+# Checks naming format of reference index and tires to match
+if [ -e "$RG".ann ]; then
+    idx="$RG"
+else
+    idx="${RG%.*}"
+fi
+
 # If sample is identified as historic uses custom value for -l (seedLen), -n (maxDiff), and -o (maxGapO)
 if [ "$age" == " historic" ]; then
     # Gets Suffix Array coordinates for input reads
@@ -21,14 +28,14 @@ if [ "$age" == " historic" ]; then
     -l 16500 \
     -n 0.01 \
     -o 2 \
-    "${RG%.*}" \
+    "$idx" \
     "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.truncated \
     | \
 
     # Generate alignments
     bwa samse \
     -r "@RG\tID:$(basename "$sample")\tSM:$(basename "$sample")" \
-    "${RG%.*}" \
+    "$idx" \
     - \
     "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.truncated \
     | \
@@ -49,7 +56,7 @@ else
         # Align sample to reference genome
         bwa "$algo" -t 8 \
         -R "@RG\tID:$(basename "$sample")\tSM:$(basename "$sample")" \
-        "${RG%.*}" \
+        "$idx" \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.truncated \
         | \
 
@@ -67,14 +74,14 @@ else
     elif [ "$algo" == "aln" ]; then
         # Gets Suffix Array coordinates for input reads
         bwa "$algo" -t 8 \
-        "${RG%.*}" \
+        "$idx" \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.truncated \
         | \
 
         # Generate alignments
         bwa samse \
         -r "@RG\tID:$(basename "$sample")\tSM:$(basename "$sample")" \
-        "${RG%.*}" \
+        "$idx" \
         - \
         "$WD"/"$(basename "$sample")"/"$(basename "$sample")"_trimmed.truncated \
         | \
