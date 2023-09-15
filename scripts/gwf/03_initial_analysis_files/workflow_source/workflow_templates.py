@@ -1,15 +1,26 @@
 from gwf import AnonymousTarget
 import os
 
-def species_abbreviation(species_name):
-    """Function for creating species abbreviation from species name."""
+def species_abbreviation(species_name: str):
+    """Creates species abbreviation from species name.
+    
+    :param str species_name:
+        Species name written as *genus* *species*"""
     genus, species = species_name.split()
     genus = genus[0].upper() + genus[1:3]
     species = species[0].upper() + species[1:3]
     return genus + species
 
-def parse_fasta(fasta_file):
-    """Function to parse FASTA file, retrieving all sequence names and lengths and returning them paired in a list of dictionaries."""
+def parse_fasta(fasta_file: str):
+    """Parses `FASTA` file returning all sequence names and lengths paired in a list of dictionaries.
+    
+    ::
+    
+        return [{'sequence_name': str, 'sequence_length': int}, ...]
+    
+    :param str fasta_file:
+        Sequence file in `FASTA` format.
+    """
     fasta_list = []
     seq_name = None
     length = 0
@@ -27,8 +38,23 @@ def parse_fasta(fasta_file):
         fasta_list.append({'sequence_name': seq_name, 'sequence_length': length})
     return fasta_list
 
-def partition_chrom(parse_fasta, size = 500000):
-    """Function to get partitioning of parsed fasta. Creates a list of dictionaries containing 'num', 'region', 'start', 'end'."""
+def partition_chrom(parse_fasta: list, size: int = 500000):
+    """
+    Partitions `FASTA` file parsed with **parse_fasta**.
+    
+    Uses the list of dictionaries from **parse_fasta** to creates a list of dictionaries
+    containing with partition number, sequence name, start and end postion.
+    By default the partition size is 500kbs.
+    
+    ::
+    
+        return [{'num': int, 'region': str, 'start': int, 'end': int}, ...]
+    
+    :param list parse_fasta:
+        List of dictionaries produced by **parse_fasta**.
+    :param int size:
+        Size of partitions. Default 500kb.
+    """
     chrom_partition = []
     num = 1
     for chrom in parse_fasta:
@@ -48,8 +74,17 @@ def name_vcf(idx, target):
     chr = os.path.splitext(os.path.basename(target.outputs['region']))[0].split('_', 1)[1]
     return 'VCF_{idx}_{chr}'.format(chr=chr, idx=idx+1)
 
-def create_vcf_per_chr_pooled(region, num, reference_genome, sample_list, repeat_regions, temp_dir, sample_name, start: int, end: int, ploidy = 100, bestn = 3):
-    """Template for creating a VCF file for each 'chromosome' in a pooled sample BAM"""
+def create_vcf_per_chr_pooled(region: str, num: int, reference_genome: str, sample_list: str, repeat_regions: str, temp_dir: str, sample_name: str, start: int, end: int, ploidy = 100, bestn = 3):
+    """
+    Template: Create VCF file for each 'chromosome' in a pooled alignment using :script:`freebayes`, :script:`SnpSift intervals` and :script:`bcftools filter`.
+
+    Template I/O::
+        
+        inputs = {'region': [reference_genome, repeat_regions]}
+
+        outputs = {'region': *.bcf}
+
+    """
     check_vcf = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/check_vcf_entry.py'
     inputs = {'region': [reference_genome,
               repeat_regions]}
@@ -126,8 +161,17 @@ def create_vcf_per_chr_pooled(region, num, reference_genome, sample_list, repeat
     """.format(reference_genome=reference_genome, bestn=bestn, ploidy=ploidy, region=region, sample_list=sample_list, repeat_regions=repeat_regions, num=num, temp_dir=temp_dir, sample_name=sample_name, start=start, end=end, check_vcf=check_vcf)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def create_vcf_per_chr_individual(region, num, reference_genome, sample_list, repeat_regions, temp_dir, sample_name, start: int, end: int, ploidy = 2, bestn = 3):
-    """Template for creating a VCF file for each 'chromosome' in a individual sample BAM"""
+def create_vcf_per_chr_individual(region: str, num: int, reference_genome: str, sample_list: str, repeat_regions: str, temp_dir: str, sample_name: str, start: int, end: int, ploidy = 2, bestn = 3):
+    """
+    Template: Create VCF file for each 'chromosome' in individual alignments using :script:`freebayes`, :script:`SnpSift intervals` and :script:`bcftools filter`.
+    
+    Template I/O::
+
+        inputs = {'region': [reference_genome, repeat_regions]}
+
+        outputs = {'region': *.bcf}
+
+    """
     check_vcf = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/check_vcf_entry.py'
     inputs = {'region': [reference_genome,
               repeat_regions]}
@@ -203,8 +247,23 @@ def create_vcf_per_chr_individual(region, num, reference_genome, sample_list, re
     """.format(reference_genome=reference_genome, bestn=bestn, ploidy=ploidy, region=region, sample_list=sample_list, repeat_regions=repeat_regions, num=num, temp_dir=temp_dir, sample_name=sample_name, start=start, end=end, check_vcf=check_vcf)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def vcf_concat(regions, sample_name, temp_dir):
-    """Template for concatenating VCF parts into one VCF file."""
+def vcf_concat(regions: list, sample_name: str, temp_dir: str):
+    """
+    Template: Concatenates `VCF` parts into a single `VCF` file using :script:`bcftools concat`.
+    
+    Template I/O::
+
+        inputs = {'regions': regions}
+
+        outputs = {'concatenated_vcf': *.vcf}
+    
+    :param dict regions:
+        List of all `VCF` files to concatenate.
+    :param str sample_name:
+        Name of current sample
+    :param str temp_dir:
+        Directory path to keep temporary files.
+    """
     inputs = {'regions': regions}
     outputs = {'concatenated_vcf': '{temp_dir}/{sample_name}.vcf'.format(temp_dir=temp_dir, sample_name=sample_name)}
     protect = [outputs['concatenated_vcf']]
@@ -236,7 +295,16 @@ def vcf_concat(regions, sample_name, temp_dir):
     return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
 
 def snpEff_annotation(temp_dir, work_dir, sample_name, snpEff_config, reference_genome_version):
-    """Template for annotation of VCF file using snpEff."""
+    """
+    Template: Annotation of :format:`VCF` file using :script:`snpEff`.
+    
+    Template I/O::
+
+        inputs = {'concatenated_vcf': *.vcf}
+
+        outputs = {'snpeff_vcf': *.ann.vcf,
+                'snpeff_stat': snpEff_summary.csv}
+    """
     inputs = {'concatenated_vcf': '{temp_dir}/{sample_name}.vcf'.format(temp_dir=temp_dir, sample_name=sample_name)}
     outputs = {'snpeff_vcf': '{work_dir}/{sample_name}.ann.vcf'.format(work_dir=work_dir, sample_name=sample_name),
                'snpeff_stat': '{work_dir}/snpEff_summary.csv'.format(work_dir=work_dir)}

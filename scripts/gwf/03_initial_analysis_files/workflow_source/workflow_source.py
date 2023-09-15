@@ -3,6 +3,11 @@ from gwf.workflow import collect
 import os, yaml, glob, sys
 from workflow_templates import *
 
+# Workflow for creating VCF file of from alignments of one to many individually sequenced specimen from a population or pool-sequence specimen.
+# The reference genome is used to create a list of all 'chromosomes' and their lengths, which are to partitioned into smaller sequences of 500kbs.
+# The partitioned list is used to do variant calling in parallel on thousands of segments to reduce the overall time needed.
+# A BED file can be used to avoid repeat regions and further decrease the time needed. By default all non-SNP variants, e.g. indels, are removed.
+# Once all VCF for all segments have been created they are merged into one file on which SNPeff is run. 
 def create_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
     
     # --------------------------------------------------

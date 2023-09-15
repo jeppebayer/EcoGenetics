@@ -2,7 +2,10 @@ from gwf import AnonymousTarget
 import glob, os
 
 def species_abbreviation(species_name: str) -> str:
-    """Function for creating species abbreviation from species name."""
+    """Creates species abbreviation from species name.
+    
+    :param str species_name:
+        Species name written as *genus* *species*"""
     genus, species = species_name.split(maxsplit=1)
     genus = genus[0].upper() + genus[1:3]
     species = species[0].upper() + species[1:3]
@@ -520,8 +523,8 @@ def ligation_events(sam_file: str, chrom_sizes: str):
         --chroms-path {chrom_sizes} \
         {sam} \
     | pairtools sort \
-        -tmpdir "$temp_dir" \
-        -nproc {cores} \
+        --tmpdir "$temp_dir" \
+        --nproc {cores} \
         > {sorted_pairsam}.prog
     
     mv {sorted_pairsam}.prog {sorted_pairsam}
