@@ -67,7 +67,8 @@ def partition_chrom(parse_fasta: list, size: int = 500000):
             start = end
             num += 1
         chrom_partition.append({'num': num, 'region': chrom['sequence_name'], 'start': start, 'end': start + partial_chunk})
-        # num += 1 # Forgot this initially
+        # TODO uncomment next line
+        # num += 1
     return chrom_partition
 
 def name_vcf(idx, target):
@@ -334,4 +335,219 @@ def snpEff_annotation(temp_dir, work_dir, sample_name, snpEff_config, reference_
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """.format(temp_dir=temp_dir, work_dir=work_dir, sample_name=sample_name, reference_genome_version=reference_genome_version, snpEff_config=snpEff_config)
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def vcf_per_chr_pooled_all(reference_genome: str, sample_list: str, repeat_regions: str | None, working_directory: str, region: str, num: int, start: int, end: int, ploidy = 100, bestn = 3):
+    """
+    Template: Create VCF file for each 'chromosome' in a pooled alignment using :script:`freebayes`, :script:`SnpSift intervals` and :script:`bcftools filter`.
+
+    Template I/O::
+        
+        inputs = {'reference': reference_genome, 
+                  'repeats': repeat_regions]}
+
+        outputs = {'region': *.bcf}
+
+    """
+    check_vcf = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/check_vcf_entry.py'
+    inputs = {'reference': reference_genome,
+              'repeats': repeat_regions}
+    outputs = {'region': '{work_dir}/tmp/{species_abbr}_{num}_{region}.bcf'.format(work_dir=working_directory, species_abbr=species_abbreviation(os.path.basename(os.path.dirname(working_directory))), num=num, region=region)}
+    options = {
+        'cores': 1,
+        'memory': '100g',
+        'walltime': '24:00:00'
+    }
+    if inputs['repeats'] is None:
+        repeat_exclude = True
+    else:
+        repeat_exclude = False
+    spec = """
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+
+    export _JAVA_OPTIONS="-Xms{mem}G -Xmx{mem}G"
+
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+
+    if [ ! -e {work_dir}/tmp ]; then
+        mkdir -m 775 {work_dir}/tmp
+    fi
+
+    check=$(freebayes \
+        -f {reference_genome} \
+        -n {bestn} \
+        -p {ploidy} \
+        -r {region}:{start}-{end} \
+        --min-alternate-fraction 0.05 \
+        --min-alternate-count 2 \
+        --report-monomorphic \
+        -b {sample_list} \
+    | {check_vcf})
+
+    if [ "$check" -eq 1 ]; then
+        if [ {repeat_excld} == True ]; then
+            freebayes \
+                -f {reference_genome} \
+                -n {bestn} \
+                -p {ploidy} \
+                -r {region}:{start}-{end} \
+                --min-alternate-fraction 0 \
+                --min-alternate-count 2 \
+                --report-monomorphic \
+                --pooled-discrete  \
+                -b {sample_list} \
+            | bcftools filter \
+                --SnpGap 5 \
+                -O u \
+                - \
+            | bcftools filter \
+                -e 'TYPE~"del" || TYPE~"ins" || TYPE~"complex"' \
+                -O u \
+                - \
+                > {bcf}.prog
+        else
+            freebayes \
+                -f {reference_genome} \
+                -n {bestn} \
+                -p {ploidy} \
+                -r {region}:{start}-{end} \
+                --min-alternate-fraction 0 \
+                --min-alternate-count 2 \
+                --report-monomorphic \
+                --pooled-discrete  \
+                -b {sample_list} \
+            | SnpSift intervals \
+                -x \
+                {repeat_regions} \
+            | bcftools filter \
+                --SnpGap 5 \
+                -O u \
+                - \
+            | bcftools filter \
+                -e 'TYPE~"del" || TYPE~"ins" || TYPE~"complex"' \
+                -O u \
+                - \
+                > {bcf}.prog
+    else
+        freebayes \
+            -f {reference_genome} \
+            -n {bestn} \
+            -p {ploidy} \
+            -r {region}:{start}-{end} \
+            --min-alternate-fraction 0.05 \
+            --min-alternate-count 2 \
+            --report-monomorphic \
+            -b {sample_list} \
+        | bcftools view \
+        -O u \
+        > {bcf}.prog
+    fi
+    
+    mv {bcf}.prog {bcf}
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(mem=options['memory'], work_dir=working_directory, check_vcf=check_vcf, repeat_excld=repeat_exclude ,reference_genome=inputs['reference'], bestn=bestn, ploidy=ploidy, region=region, sample_list=sample_list, repeat_regions=inputs['repeats'], num=num, start=start, end=end, bcf=outputs['region'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def concatenate_vcf(regions: list, output_directory: str, species_name: str):
+    """
+    Template: Concatenates `VCF` parts into a single `VCF` file using :script:`bcftools concat`.
+    
+    Template I/O::
+
+        inputs = {'regions': regions}
+
+        outputs = {'concat_vcf': *.vcf}
+    
+    :param list regions:
+        List of all `VCF` files to concatenate.
+    :param str output_directory:
+        Directory to output resulting :format:`VCF` file.
+    :param str species_name:
+        Name of species.
+    """
+    inputs = {'regions': regions}
+    outputs = {'concat_vcf': '{output_dir}/{species_abbr}.vcf'.format(output_dir=output_directory, species_abbr=species_abbreviation(species_name))}
+    protect = [outputs['concat_vcf']]
+    options = {
+        'cores': 8,
+        'memory': '96g',
+        'walltime': '10:00:00'
+    }
+    spec = """
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    bcftools concat \
+        --threads 8 \
+        -o {vcf}.prog \
+        -O v \
+        {regions}
+    
+    mv {vcf}.prog {vcf}
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(vcf=outputs['concat_vcf'], regions=' '.join(inputs['regions']))
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def snpEff_ann(vcf_file: str, reference_genome_version: str, output_directory: str):
+    """
+    Template: Annotation of :format:`VCF` file using :script:`snpEff`.
+    
+    Template I/O::
+
+        inputs = {'vcf': vcf_file}
+
+        outputs = {'snpeff_vcf': output_directory/*.ann.vcf,
+                   'snpeff_stat': output_directory/snpEff_summary.csv}
+    
+    :param str vcf_file:
+        :format:`VCF` file to annotate.
+    :param str reference_genome_version:
+        Name of entry in :script:`snpEff` configuration file.
+    :param str output_directory:
+        Directory for resulting annotated :format:`VCF` file and statistics file.
+    """
+    # TODO make snpEff configuration file available in workflow_source directory. Might only need to contained custom entries.
+    snpeff_config = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/snpEff.config'
+    inputs = {'vcf': vcf_file}
+    outputs = {'snpeff_vcf': '{output_dir}/{file_name}.ann.vcf'.format(output_dir=output_directory, file_name=os.path.splitext(os.path.basename(inputs['vcf']))[0]),
+               'snpeff_stat': '{output_dir}/snpEff_summary.csv'.format(output_dir=output_directory)}
+    options = {
+        'cores': 2,
+        'memory': '50g',
+        'walltime': '03:00:00'
+    }
+    spec = """
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+
+    snpEff ann \
+        -csvStats {stats} \
+        -c {snpEff_config} \
+        {reference_genome_version} \
+        {vcf} \
+        > {ann_vcf}.prog
+
+    mv {ann_vcf}.prog {ann_vcf}
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(stats=outputs['snpeff_stat'], snpeff_config=snpeff_config, reference_genome_version=reference_genome_version, vcf=inputs['vcf'], ann_vcf=outputs['snpeff_vcf'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)

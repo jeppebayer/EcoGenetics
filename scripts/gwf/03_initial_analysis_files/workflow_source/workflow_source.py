@@ -8,22 +8,29 @@ from workflow_templates import *
 # The partitioned list is used to do variant calling in parallel on thousands of segments to reduce the overall time needed.
 # A BED file can be used to avoid repeat regions and further decrease the time needed. By default all non-SNP variants, e.g. indels, are removed.
 # Once all VCF for all segments have been created they are merged into one file on which SNPeff is run. 
-def create_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
+def create_vcf_workflow(config_file: str = glob.glob('*config.yaml')[0]):
+    """
+    Workflow for creating a single :format:`VCF` file of either pooled or individual sequence data.
+
+    The workflow will automatically any file in the execution directory following the naming convention: *config.yaml
     
+    :param str config_file:
+        Configuration file containing pre-defined set of variables
+    """
     # --------------------------------------------------
     #                  Configuration
     # --------------------------------------------------
 
-    config=yaml.safe_load(open(config_file))
-    ACCOUNT=config['account']
-    SPECIES_NAME=config['species_name']
-    SAMPLE_LIST=config['sample_list']
-    REFERENCE_GENOME=config['reference_genome_path']
-    REPEAT_REGIONS=config['repeat_regions_bed']
-    TYPE=config['sequencing_type'].lower()
-    WORK_DIR=config['working_directory']
-    PLOIDY=config['ploidy']
-    BESTN=config['bestn']
+    config = yaml.safe_load(open(config_file))
+    ACCOUNT:str = config['account']
+    SPECIES_NAME:str = config['species_name']
+    SAMPLE_LIST: list = config['sample_list']
+    REFERENCE_GENOME: str = config['reference_genome_path']
+    REPEAT_REGIONS: str | None = config['repeat_regions_bed']
+    TYPE: str = config['sequencing_type'].lower()
+    WORK_DIR: str = config['working_directory']
+    PLOIDY: int = config['ploidy']
+    BESTN: int = config['bestn']
 
     # --------------------------------------------------
     #                  Workflow
@@ -33,10 +40,7 @@ def create_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
     species_name_nospace = SPECIES_NAME.replace(' ', '_')
     # Creates a list of dictionaries where each dictionary contains the name of a region, start and end position for each segment within a region and its chronological number
     partitions = partition_chrom(parse_fasta(REFERENCE_GENOME))
-    # with open('test.txt', 'w') as tester:
-    #     for part in partitions:
-    #         tester.write(str(part) + '\n')
-    # Takes the sample list and converts it into a multi-line string where each line was an entry in the list
+    # Takes the sample list and converts it into a string including all samples
     sample_string = ' -b '.join(SAMPLE_LIST)
     # Gets the path to snpEff config file
     snpEff_config = glob.glob(sys.prefix + '/share/snpeff*/snpEff.config')[0]
@@ -114,4 +118,71 @@ def create_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
         )
     )
 
+    return gwf
+
+def pooled_species_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
+    """
+    Workflow for creating a single :format:`VCF` file containg data on all pooled samples within a species.
+
+    The workflow will automatically any file in the execution directory following the naming convention: *config.yaml
+    
+    :param str config_file:
+        Configuration file containing pre-defined set of variables
+    """
+    # --------------------------------------------------
+    #                  Configuration
+    # --------------------------------------------------
+
+    config = yaml.safe_load(open(config_file))
+    ACCOUNT: str = config['account']
+    SPECIES_NAME: str = config['species_name']
+    SAMPLE_LIST: list = config['sample_list']
+    REFERENCE_GENOME: str = config['reference_genome_path']
+    REPEAT_REGIONS:str | None = config['repeat_regions_bed']
+    SNPEFF: bool = config['snpeff']
+    WORK_DIR: str = config['working_directory']
+    PLOIDY: int = config['ploidy']
+    BESTN: int = config['bestn']
+
+    # --------------------------------------------------
+    #                  Workflow
+    # --------------------------------------------------
+
+    gwf = Workflow(
+        defaults={'account': ACCOUNT}
+    )
+
+    partitions = partition_chrom(parse_fasta=parse_fasta(REFERENCE_GENOME), size=200000)
+    sample_string = ' -b'.join(SAMPLE_LIST)
+
+    # Directory setup
+    top_dir = '{work_dir}/03_initial_analysis_files/{species_name}/all_populations'.format(work_dir=WORK_DIR, species_name=SPECIES_NAME.replace(' ', '_'))
+    os.makedirs(top_dir, mode=775, exist_ok=True)
+
+    vcf_parts = gwf.map(
+        template_func=vcf_per_chr_pooled_all,
+        inputs=partitions,
+        extra={'reference_genome': REFERENCE_GENOME,
+               'sample_list': sample_string,
+               'repeat_regions': REPEAT_REGIONS,
+               'working_directory': top_dir,
+               'ploidy': PLOIDY,
+               'bestn': BESTN})
+    concatenate = gwf.target_from_template(
+        name='VCF_concat_{}'.format(species_abbreviation(SPECIES_NAME)),
+        template=concatenate_vcf(
+            regions=collect(vcf_parts, ['region'])['regions'],
+            output_directory=top_dir,
+            species_name=SPECIES_NAME
+        )
+    )
+    if SNPEFF is True:
+        snpeff = gwf.target_from_template(
+            name='snpEff_annotation_{}'.format(species_abbreviation(SPECIES_NAME)),
+            template=snpEff_ann(
+                vcf_file=concatenate.outputs['concat_vcf'],
+                reference_genome_version=os.path.splitext(os.path.basename(REFERENCE_GENOME))[0],
+                output_directory=top_dir
+            )
+        )
     return gwf
