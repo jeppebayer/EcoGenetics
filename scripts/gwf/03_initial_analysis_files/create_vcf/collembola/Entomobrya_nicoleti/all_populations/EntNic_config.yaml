@@ -2,9 +2,9 @@
 account: EcoGenetics
 # Name of species being worked on.
 species_name: Entomobrya nicoleti
-# Path to sample alignment file (BAM format). Can be a list with multiple entries or a single entry
-sample_list:
-- 
+# Path to species directory. The species directory is expected to include one sub-directory for each sample 
+# and that each of these sub-directories contain an alignment file following the name scheme: *_filtered.bam
+species_directory_path: /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Entomobrya_nicoleti
 # Path to reference genome.
 reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Entomobrya_nicoleti/EG_EntNic_16022023_genomic_nomask_noann.fna
 # Path to BED formatted file containing repeat regions or 'None' if no file

@@ -3,6 +3,8 @@ from gwf.workflow import collect
 import os, yaml, glob, sys
 from workflow_templates import *
 
+# TODO Make create_vcf_workflow more streamlined like pooled_species_vcf_workflow
+
 # Workflow for creating VCF file of from alignments of one to many individually sequenced specimen from a population or pool-sequence specimen.
 # The reference genome is used to create a list of all 'chromosomes' and their lengths, which are to partitioned into smaller sequences of 500kbs.
 # The partitioned list is used to do variant calling in parallel on thousands of segments to reduce the overall time needed.
@@ -122,7 +124,7 @@ def create_vcf_workflow(config_file: str = glob.glob('*config.yaml')[0]):
 
 def pooled_species_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
     """
-    Workflow for creating a single :format:`VCF` file containg data on all pooled samples within a species.
+    Workflow for creating a single :format:`VCF` file containing data on all pooled samples within a species.
 
     The workflow will automatically any file in the execution directory following the naming convention: *config.yaml
     
@@ -136,7 +138,7 @@ def pooled_species_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
     config = yaml.safe_load(open(config_file))
     ACCOUNT: str = config['account']
     SPECIES_NAME: str = config['species_name']
-    SAMPLE_LIST: list = config['sample_list']
+    SPECIES_DIR: list = config['species_directory_path']
     REFERENCE_GENOME: str = config['reference_genome_path']
     REPEAT_REGIONS:str | None = config['repeat_regions_bed']
     SNPEFF: bool = config['snpeff']
@@ -151,27 +153,40 @@ def pooled_species_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
     gwf = Workflow(
         defaults={'account': ACCOUNT}
     )
-
+    
+    sample_list = gwf.glob('{}/*/*_filtered.bam'.format(SPECIES_DIR))
+    sample_string = ' -b '.join(sample_list)
     partitions = partition_chrom(parse_fasta=parse_fasta(REFERENCE_GENOME), size=200000)
-    sample_string = ' -b'.join(SAMPLE_LIST)
 
     # Directory setup
     top_dir = '{work_dir}/03_initial_analysis_files/{species_name}/all_populations'.format(work_dir=WORK_DIR, species_name=SPECIES_NAME.replace(' ', '_'))
-    os.makedirs(top_dir, mode=775, exist_ok=True)
+    os.makedirs(top_dir, exist_ok=True)
 
-    vcf_parts = gwf.map(
-        template_func=vcf_per_chr_pooled_all,
-        inputs=partitions,
-        extra={'reference_genome': REFERENCE_GENOME,
-               'sample_list': sample_string,
-               'repeat_regions': REPEAT_REGIONS,
-               'working_directory': top_dir,
-               'ploidy': PLOIDY,
-               'bestn': BESTN})
+    if REPEAT_REGIONS == 'None':
+        vcf_parts = gwf.map(
+            template_func=vcf_per_chr_pooled_all_no_rep,
+            inputs=partitions,
+            name=name_vcf,
+            extra={'reference_genome': REFERENCE_GENOME,
+                'sample_list': sample_string,
+                'working_directory': top_dir,
+                'ploidy': PLOIDY,
+                'bestn': BESTN})
+    else:
+        vcf_parts = gwf.map(
+            template_func=vcf_per_chr_pooled_all_rep,
+            inputs=partitions,
+            name=name_vcf,
+            extra={'reference_genome': REFERENCE_GENOME,
+                'sample_list': sample_string,
+                'repeat_regions': REPEAT_REGIONS,
+                'working_directory': top_dir,
+                'ploidy': PLOIDY,
+                'bestn': BESTN})
     concatenate = gwf.target_from_template(
         name='VCF_concat_{}'.format(species_abbreviation(SPECIES_NAME)),
         template=concatenate_vcf(
-            regions=collect(vcf_parts, ['region'])['regions'],
+            regions=collect(vcf_parts.outputs, ['region'])['regions'],
             output_directory=top_dir,
             species_name=SPECIES_NAME
         )

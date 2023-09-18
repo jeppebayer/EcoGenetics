@@ -1,6 +1,5 @@
 from gwf import AnonymousTarget
-import os
-import sys
+import os, sys
 
 def snpEff_entry_text(reference_genome, species_name):
     """Function to create entry text for snpEff database"""
@@ -10,9 +9,12 @@ def snpEff_entry_text(reference_genome, species_name):
 {reference_genome_version}.genome : {species_name}""".format(reference_genome_version=reference_genome_version, species_name=species_name)
     return entry_text
 
-def species_abbreviation(species_name):
-    """Function for creating species abbreviation from species name"""
-    genus, species = species_name.split()
+def species_abbreviation(species_name: str):
+    """Creates species abbreviation from species name.
+    
+    :param str species_name:
+        Species name written as *genus* *species*"""
+    genus, species = species_name.replace(' ', '_').split('_')
     genus = genus[0].upper() + genus[1:3]
     species = species[0].upper() + species[1:3]
     return genus + species

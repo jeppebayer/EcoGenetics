@@ -6,7 +6,7 @@ def species_abbreviation(species_name: str) -> str:
     
     :param str species_name:
         Species name written as *genus* *species*"""
-    genus, species = species_name.split(maxsplit=1)
+    genus, species = species_name.replace(' ', '_').split('_')
     genus = genus[0].upper() + genus[1:3]
     species = species[0].upper() + species[1:3]
     return genus + species
@@ -304,54 +304,6 @@ def index_reference_genome_loop(reference_genome: str):
     """.format(reference_genome=reference_genome)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)
 
-# def directory_setup(hic_directory: str ,working_directory: str, species_name: str):
-#     """Template for setting op directory structure for hic_processing_workflow."""
-#     top_dir = '{work_dir}/04_genome_assembly/{species_name}/HiC'.format(work_dir=working_directory, species_name=species_name.replace(' ', '_'))
-#     inputs = {'read1': '{}'.format(glob.glob('{}/*_1.fq*'.format(hic_directory))[0]),
-#               'read2': '{}'.format(glob.glob('{}/*_2.fq*'.format(hic_directory))[0])}
-#     if os.path.splitext(inputs['read1'])[1] == '.gz':
-#         outputs = {'symlink1': '{top_dir}/raw/{abbr}_R1.fastq.gz'.format(top_dir=top_dir, abbr=species_abbreviation(species_name)),
-#                    'symlink2': '{top_dir}/raw/{abbr}_R2.fastq.gz'.format(top_dir=top_dir, abbr=species_abbreviation(species_name))}
-#     else:
-#         outputs = {'symlink1': '{top_dir}/raw/{abbr}_R1.fastq'.format(top_dir=top_dir, abbr=species_abbreviation(species_name)),
-#                    'symlink2': '{top_dir}/raw/{abbr}_R2.fastq'.format(top_dir=top_dir, abbr=species_abbreviation(species_name))}
-#     options = {
-#         'cores': 1,
-#         'memory': '2g',
-#         'walltime': '00:05:00'
-#     }
-#     spec = """
-#     # Sources environment
-#     if [ "$USER" == "jepe" ]; then
-#         source /home/"$USER"/.bashrc
-#         source activate omni_c
-#     fi
-    
-#     echo "START: $(date)"
-#     echo "JobID: $SLURM_JOBID"
-    
-#     if [ ! -e {top_dir} ]; then
-#         mkdir -p {top_dir}
-#     fi
-#     if [ ! -e {top_dir}/raw ]; then
-#         mkdir {top_dir}/raw
-#     fi
-#     if [ ! -e {top_dir}/aligned ]; then
-#         mkdir {top_dir}/aligned
-#     fi
-
-#     if [ ! -e {symlink1} ]; then
-#         ln -s {read1} {symlink1}
-#     fi
-#     if [ ! -e {symlink2} ]; then
-#         ln -s {read2} {symlink2}
-#     fi
-        
-#     echo "END: $(date)"
-#     echo "$(jobinfo "$SLURM_JOBID")"
-#     """.format(top_dir=top_dir, read1=inputs['read1'], read2=inputs['read2'], symlink1=outputs['symlink1'], symlink2=outputs['symlink2'])
-#     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
-
 def get_chrom_sizes(fasta_file: str, output_directory: str = None):
     """
     Template: Create *chrom.sizes* from `FASTA` file.
@@ -493,7 +445,7 @@ def ligation_events(sam_file: str, chrom_sizes: str):
     """
     inputs = {'sam': sam_file,
               'chrom_sizes': chrom_sizes}
-    outputs = {'pairsam': '{read_name}.sorted.pairsam'.format(read_name=os.path.splitext(os.path.basename(inputs['sam']))[0])}
+    outputs = {'pairsam': '{read_name}.sorted.pairsam'.format(read_name=os.path.splitext(inputs['sam'])[0])}
     options = {
         'cores': 12,
         'memory': '96g',
@@ -816,16 +768,25 @@ def post_review_export(review_file: str, fasta_file: str, merged_no_dup: str, ch
     """.format(c=chrom_num, review=inputs['review'], path_to_input_fasta=inputs['fasta'], path_to_input_mnd=inputs['mnd'], log=outputs['logfile'], work_dir=os.path.dirname(inputs['review']))
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def hifiadapterfilt(pacbio_hifi_reads: str):
+
+
+
+
+
+
+
+
+
+def hifiadapterfilt(pacbio_hifi_reads: str, HiFiAdapterFilt_path: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/HiFiAdapterFilt'):
     """Template for running HiFiAdapterFilt to remove remaining adapters specifically from PacBio HiFi reads."""
     hifiadapterfilt_directory = '/home/jepe/software/HiFiAdapterFilt'
     output_dir = '{}/HiFiAdapterFilt'.format(os.path.dirname(pacbio_hifi_reads))
-    os.makedirs(output_dir, exist_ok=True)
-    prefix, ext = os.path.splitext(pacbio_hifi_reads)
-    if prefix.endswith(('fastq', 'fq')):
-        prefix, ext2 = os.path.splitext(prefix)
-        ext = ext2 + ext
-    inputs = {'pbhifi': pacbio_hifi_reads}
+    inputs = {'pb_hifi': pacbio_hifi_reads}
+    if inputs['pb_hifi'].endswith('.gz'):
+        prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
+        ext = 
+    else:
+        prefix = 
     outputs = {'filt': '{output_dir}/{prefix}.filt.fastq.gz'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
                'cont': '{output_dir}/{prefix}.contaminant.blastout'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
                'block': '{output_dir}/{prefix}.blocklist'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
