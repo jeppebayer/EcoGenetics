@@ -9,7 +9,7 @@ from workflow_templates import *
 # Third, PCR and possible optical duplicates are removed.
 # Fourth, a file containing all Omni-C pairs and a BAM file of the alignment is created. 
 # Fifth, a Hi-C contat map is generated using the Omni-C pairs and a chrom.sizes file containing a all chromosomes in the draft genome and their respective lengths.
-def hic_processing_workflow(config_file = glob.glob('*config.yaml')[0]):
+def hic_processing_workflow(config_file = glob.glob('*config.y*ml')[0]):
     
     # --------------------------------------------------
     #                  Configuration
@@ -78,7 +78,8 @@ def hic_processing_workflow(config_file = glob.glob('*config.yaml')[0]):
             read1=symlink1,
             read2=symlink2,
             draft_genome=REFERENCE_GENOME,
-            output_directory=align_dir
+            output_directory=align_dir,
+            species_name=SPECIES_NAME
         )
     )
     
@@ -86,7 +87,8 @@ def hic_processing_workflow(config_file = glob.glob('*config.yaml')[0]):
         name='{}_ligation_events'.format(species_abbreviation(SPECIES_NAME)),
         template=ligation_events(
             sam_file=align.outputs['sam'],
-            chrom_sizes=chrom_size.outputs['chrom_sizes']
+            chrom_sizes=chrom_size.outputs['chrom_sizes'],
+            species_name=SPECIES_NAME
         )
     )
 

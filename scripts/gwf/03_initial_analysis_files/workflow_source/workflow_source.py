@@ -10,7 +10,7 @@ from workflow_templates import *
 # The partitioned list is used to do variant calling in parallel on thousands of segments to reduce the overall time needed.
 # A BED file can be used to avoid repeat regions and further decrease the time needed. By default all non-SNP variants, e.g. indels, are removed.
 # Once all VCF for all segments have been created they are merged into one file on which SNPeff is run. 
-def create_vcf_workflow(config_file: str = glob.glob('*config.yaml')[0]):
+def create_vcf_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
     """
     Workflow for creating a single :format:`VCF` file of either pooled or individual sequence data.
 
@@ -122,7 +122,7 @@ def create_vcf_workflow(config_file: str = glob.glob('*config.yaml')[0]):
 
     return gwf
 
-def pooled_species_vcf_workflow(config_file = glob.glob('*config.yaml')[0]):
+def pooled_species_vcf_workflow(config_file = glob.glob('*config.y*ml')[0]):
     """
     Workflow for creating a single :format:`VCF` file containing data on all pooled samples within a species.
 

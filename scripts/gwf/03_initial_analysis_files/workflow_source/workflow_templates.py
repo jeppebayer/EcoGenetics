@@ -180,7 +180,7 @@ def create_vcf_per_chr_individual(region: str, num: int, reference_genome: str, 
     options = {
         'cores': 1,
         'memory': '100g',
-        'walltime': '18:00:00'
+        'walltime': '24:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then

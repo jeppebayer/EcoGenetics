@@ -349,7 +349,7 @@ def get_chrom_sizes(fasta_file: str, output_directory: str = None):
     """.format(script='/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/chrom_sizes.py', fasta_file=inputs['fasta'], chrom_sizes=outputs['chrom_sizes'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def hic_align(read1: str, read2: str, draft_genome: str, output_directory: str = None):
+def hic_align(read1: str, read2: str, draft_genome: str, species_name: str, output_directory: str = None):
     """
     Template: Align Hi-C data to draft genome using :script:`bwa mem`.
 
@@ -377,6 +377,8 @@ def hic_align(read1: str, read2: str, draft_genome: str, output_directory: str =
         Read pair 2 sequence file.
     :param str draft_genome:
         Assembled draft genome.
+    :param str species_name:
+        Name of species in format 'genus species' | 'genus_species'.
     :param str output_directory:
         Directory to place resulting *.sam* file
     """
@@ -403,6 +405,7 @@ def hic_align(read1: str, read2: str, draft_genome: str, output_directory: str =
     
     bwa mem \
         -t {cores} \
+        -R '@RG\tID:{species_abbr}.HiC\tSM:HiC_to_draft' \
         -S \
         -P \
         -5 \
@@ -416,10 +419,10 @@ def hic_align(read1: str, read2: str, draft_genome: str, output_directory: str =
         
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(cores=options['cores'], reference_genome=inputs['reference_genome'], read1=inputs['read1'], read2=inputs['read2'], sam=outputs['sam'])
+    """.format(cores=options['cores'], species_abbr=species_abbreviation(species_name), reference_genome=inputs['reference_genome'], read1=inputs['read1'], read2=inputs['read2'], sam=outputs['sam'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def ligation_events(sam_file: str, chrom_sizes: str):
+def ligation_events(sam_file: str, chrom_sizes: str, species_name: str):
     """
     Template: Finds ligation junctions using :script:`pairtools parse`.
 
@@ -442,6 +445,8 @@ def ligation_events(sam_file: str, chrom_sizes: str):
         Hi-C alignmnet in `SAM` format.
     :param str chrom_sizes:
         File listing all chromosomes in draft genome and their respective lengths.
+    :param str species_name:
+        Name of species in format 'genus species' | 'genus_species'.
     """
     inputs = {'sam': sam_file,
               'chrom_sizes': chrom_sizes}
@@ -467,6 +472,7 @@ def ligation_events(sam_file: str, chrom_sizes: str):
     fi
 
     pairtools parse \
+        --assembly EG_{species_abbr} \
         --min-mapq 40 \
         --walks-policy 5unique \
         --max-inter-align-gap 30 \
@@ -483,7 +489,7 @@ def ligation_events(sam_file: str, chrom_sizes: str):
         
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(cores=options['cores'], chrom_sizes=inputs['chrom_sizes'], sam=inputs['sam'], sorted_pairsam=outputs['pairsam'])
+    """.format(cores=options['cores'], chrom_sizes=inputs['chrom_sizes'], sam=inputs['sam'], species_abbr=species_abbreviation(species_name), sorted_pairsam=outputs['pairsam'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def de_duplicate(pairsam_file: str):
@@ -526,7 +532,7 @@ def de_duplicate(pairsam_file: str):
         {sorted_pairsam}
     
     mv {stat_file}.prog {stat_file}
-    mv{dedup_pairsam}.prog {dedup_pairsam}
+    mv {dedup_pairsam}.prog {dedup_pairsam}
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
@@ -576,18 +582,19 @@ def split_pairsam(pairsam_file: str):
         --nproc-in {cores} \
         --nproc-out {cores} \
         --output-pairs {pairs}.prog \
-        --output-sam - \
-        {pairsam} \
-    | samtools sort \
-        -@ {cores} \
-        -T "$temp_dir" \
-        -o {bam}.prog
+        --output-sam {bam}.prog \
+        {pairsam}
     
-    samtools index \
-        -@ {cores} \
-        -b \
-        -o {index}.prog \
-        {bam}
+    # samtools sort \
+    #     -@ {cores} \
+    #     -T "$temp_dir" \
+    #     -o {bam}.prog
+    
+    # samtools index \
+    #     -@ {cores} \
+    #     -b \
+    #     -o {index}.prog \
+    #     {bam}
     
     mv {pairs}.prog {pairs}
     mv {bam}.prog {bam}
@@ -776,56 +783,56 @@ def post_review_export(review_file: str, fasta_file: str, merged_no_dup: str, ch
 
 
 
-
-def hifiadapterfilt(pacbio_hifi_reads: str, HiFiAdapterFilt_path: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/HiFiAdapterFilt'):
-    """Template for running HiFiAdapterFilt to remove remaining adapters specifically from PacBio HiFi reads."""
-    hifiadapterfilt_directory = '/home/jepe/software/HiFiAdapterFilt'
-    output_dir = '{}/HiFiAdapterFilt'.format(os.path.dirname(pacbio_hifi_reads))
-    inputs = {'pb_hifi': pacbio_hifi_reads}
-    if inputs['pb_hifi'].endswith('.gz'):
-        prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
-        ext = 
-    else:
-        prefix = 
-    outputs = {'filt': '{output_dir}/{prefix}.filt.fastq.gz'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-               'cont': '{output_dir}/{prefix}.contaminant.blastout'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-               'block': '{output_dir}/{prefix}.blocklist'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-               'stats': '{output_dir}/{prefix}.stats'.format(output_dir=output_dir, prefix=os.path.basename(prefix))}
-    options = {
-        'cores': 10,
-        'memory': '100g',
-        'walltime': '120'
-    }
-    spec = """
-    # Sources environment
-    if [ "$USER" == "jepe" ]; then
-        source /home/"$USER"/.bashrc
-        source activate genome_assembly
-    fi
+# TODO Fix
+# def hifiadapterfilt(pacbio_hifi_reads: str, HiFiAdapterFilt_path: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/HiFiAdapterFilt'):
+#     """Template for running HiFiAdapterFilt to remove remaining adapters specifically from PacBio HiFi reads."""
+#     hifiadapterfilt_directory = '/home/jepe/software/HiFiAdapterFilt'
+#     output_dir = '{}/HiFiAdapterFilt'.format(os.path.dirname(pacbio_hifi_reads))
+#     inputs = {'pb_hifi': pacbio_hifi_reads}
+#     if inputs['pb_hifi'].endswith('.gz'):
+#         prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
+#         ext = 
+#     else:
+#         prefix = 
+#     outputs = {'filt': '{output_dir}/{prefix}.filt.fastq.gz'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
+#                'cont': '{output_dir}/{prefix}.contaminant.blastout'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
+#                'block': '{output_dir}/{prefix}.blocklist'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
+#                'stats': '{output_dir}/{prefix}.stats'.format(output_dir=output_dir, prefix=os.path.basename(prefix))}
+#     options = {
+#         'cores': 10,
+#         'memory': '100g',
+#         'walltime': '120'
+#     }
+#     spec = """
+#     # Sources environment
+#     if [ "$USER" == "jepe" ]; then
+#         source /home/"$USER"/.bashrc
+#         source activate genome_assembly
+#     fi
     
-    echo "START: $(date)"
-    echo "JobID: $SLURM_JOBID"
+#     echo "START: $(date)"
+#     echo "JobID: $SLURM_JOBID"
     
-    export PATH=$PATH:{hifiadapterfilt_dir}
-    export PATH=$PATH:{hifiadapterfilt_dir}/DB
+#     export PATH=$PATH:{hifiadapterfilt_dir}
+#     export PATH=$PATH:{hifiadapterfilt_dir}/DB
 
-    cp {pacbiohifi} "$(dirname({pacbiohifi}))"/prog.{ext}
+#     cp {pacbiohifi} "$(dirname({pacbiohifi}))"/prog.{ext}
 
-    bash {hifiadapterfilt_dir}/pbadapterfilt.sh \
-        -t {cores} \
-        -p prog \
-        -o {output_dir}
+#     bash {hifiadapterfilt_dir}/pbadapterfilt.sh \
+#         -t {cores} \
+#         -p prog \
+#         -o {output_dir}
         
-    mv {output_dir}/prog.filt.fastq.gz {filt}
-    mv {output_dir}/prog.contaminant.blastout {cont}
-    mv {output_dir}/prog.blocklist {block}
-    mv {output_dir}/prog.stats {stats}
-    rm "$(dirname({pacbiohifi}))"/prog.{ext}
+#     mv {output_dir}/prog.filt.fastq.gz {filt}
+#     mv {output_dir}/prog.contaminant.blastout {cont}
+#     mv {output_dir}/prog.blocklist {block}
+#     mv {output_dir}/prog.stats {stats}
+#     rm "$(dirname({pacbiohifi}))"/prog.{ext}
         
-    echo "END: $(date)"
-    echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(pacbiohifi=inputs['pbhifi'], hifiadapterfilt_dir=hifiadapterfilt_directory, ext=ext, cores=options['cores'], prefix=prefix, output_dir=output_dir, filt=outputs['filt'], cont=outputs['cont'], block=outputs['block'], stats=outputs['stats'])
-    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+#     echo "END: $(date)"
+#     echo "$(jobinfo "$SLURM_JOBID")"
+#     """.format(pacbiohifi=inputs['pbhifi'], hifiadapterfilt_dir=hifiadapterfilt_directory, ext=ext, cores=options['cores'], prefix=prefix, output_dir=output_dir, filt=outputs['filt'], cont=outputs['cont'], block=outputs['block'], stats=outputs['stats'])
+#     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def kmer_count():
     """Template for counting k'mers in genome sequence data"""
