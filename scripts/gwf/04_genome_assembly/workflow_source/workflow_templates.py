@@ -582,19 +582,21 @@ def split_pairsam(pairsam_file: str):
         --nproc-in {cores} \
         --nproc-out {cores} \
         --output-pairs {pairs}.prog \
-        --output-sam {bam}.prog \
+        --output-sam {file_name}.sam \
         {pairsam}
+
+    samtools sort \
+        -@ {cores} \
+        -T "$temp_dir" \
+        -O BAM \
+        -o {bam}.prog \
+        {file_name}.sam
     
-    # samtools sort \
-    #     -@ {cores} \
-    #     -T "$temp_dir" \
-    #     -o {bam}.prog
-    
-    # samtools index \
-    #     -@ {cores} \
-    #     -b \
-    #     -o {index}.prog \
-    #     {bam}
+    samtools index \
+        -@ {cores} \
+        -b \
+        -o {index}.prog \
+        {bam}.prog
     
     mv {pairs}.prog {pairs}
     mv {bam}.prog {bam}
@@ -602,7 +604,7 @@ def split_pairsam(pairsam_file: str):
         
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(cores=options['cores'], pairsam=inputs['pairsam'], pairs=outputs['pairs'], bam=outputs['bam'], index=outputs['index'])
+    """.format(cores=options['cores'], pairsam=inputs['pairsam'], pairs=outputs['pairs'], file_name=os.path.splitext(inputs['pairsam'])[0], bam=outputs['bam'], index=outputs['index'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def juicer_hic_matrix(pairs_file: str, chrom_sizes: str, juicer_script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
