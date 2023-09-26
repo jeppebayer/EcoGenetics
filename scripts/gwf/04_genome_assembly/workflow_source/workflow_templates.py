@@ -387,7 +387,8 @@ def hic_align(read1: str, read2: str, draft_genome: str, species_name: str, outp
     inputs = {'read1': read1,
               'read2': read2,
               'reference_genome': draft_genome}
-    outputs = {'sam': '{output_dir}/{read_name}{read_ext}.sam'.format(output_dir=output_directory, read_name=os.path.basename(read1).split(sep='_R1', maxsplit=1)[0], read_ext=read1.split(sep='_R1', maxsplit=1)[1])}
+    file_name = '{output_dir}/{read_name}{read_ext}'.format(output_dir=output_directory, read_name=os.path.basename(read1).split(sep='_R1', maxsplit=1)[0], read_ext=read1.split(sep='_R1', maxsplit=1)[1])
+    outputs = {'sam': '{}.sam'.format(file_name)}
     options = {
         'cores': 36,
         'memory': '80g',
@@ -405,21 +406,21 @@ def hic_align(read1: str, read2: str, draft_genome: str, species_name: str, outp
     
     bwa mem \
         -t {cores} \
-        -R '@RG\tID:{species_abbr}.HiC\tSM:HiC_to_draft' \
+        -R '@RG\\tID:{species_abbr}.HiC\\tSM:HiC_to_draft' \
         -S \
         -P \
         -5 \
         -T 0 \
-        -o {sam}.prog \
+        -o {file_name}.prog.sam \
         {reference_genome} \
         {read1} \
         {read2}
     
-    mv {sam}.prog {sam}
+    mv {file_name}.prog.sam {sam}
         
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(cores=options['cores'], species_abbr=species_abbreviation(species_name), reference_genome=inputs['reference_genome'], read1=inputs['read1'], read2=inputs['read2'], sam=outputs['sam'])
+    """.format(cores=options['cores'], species_abbr=species_abbreviation(species_name), reference_genome=inputs['reference_genome'], read1=inputs['read1'], read2=inputs['read2'], file_name=file_name, sam=outputs['sam'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def ligation_events(sam_file: str, chrom_sizes: str, species_name: str):
@@ -450,7 +451,8 @@ def ligation_events(sam_file: str, chrom_sizes: str, species_name: str):
     """
     inputs = {'sam': sam_file,
               'chrom_sizes': chrom_sizes}
-    outputs = {'pairsam': '{read_name}.sorted.pairsam'.format(read_name=os.path.splitext(inputs['sam'])[0])}
+    file_name = '{}.sorted'.format(os.path.splitext(inputs['sam'])[0])
+    outputs = {'pairsam': '{}.pairsam'.format(file_name)}
     options = {
         'cores': 12,
         'memory': '96g',
@@ -483,13 +485,13 @@ def ligation_events(sam_file: str, chrom_sizes: str, species_name: str):
     | pairtools sort \
         --tmpdir "$temp_dir" \
         --nproc {cores} \
-        > {sorted_pairsam}.prog
+        > {file_name}.prog.pairsam
     
-    mv {sorted_pairsam}.prog {sorted_pairsam}
+    mv {file_name}.prog.pairsam {sorted_pairsam}
         
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(cores=options['cores'], chrom_sizes=inputs['chrom_sizes'], sam=inputs['sam'], species_abbr=species_abbreviation(species_name), sorted_pairsam=outputs['pairsam'])
+    """.format(cores=options['cores'], chrom_sizes=inputs['chrom_sizes'], sam=inputs['sam'], species_abbr=species_abbreviation(species_name), file_name=file_name, sorted_pairsam=outputs['pairsam'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def de_duplicate(pairsam_file: str):
@@ -506,7 +508,8 @@ def de_duplicate(pairsam_file: str):
         `PAIRSAM` file with `SAM` entries together with the Hi-C pair information.
     """
     inputs = {'pairsam': pairsam_file}
-    outputs = {'dedup': '{file_name}.dedup.pairsam'.format(file_name=os.path.splitext(inputs['pairsam'])[0]),
+    file_name = '{}.dedup'.format(os.path.splitext(inputs['pairsam'])[0])
+    outputs = {'dedup': '{}.pairsam'.format(file_name),
                'stat': '{path}/dedup.stats'.format(path=os.path.dirname(inputs['pairsam']))}
     options = {
         'cores': 12,
@@ -528,15 +531,15 @@ def de_duplicate(pairsam_file: str):
         --nproc-out {cores} \
         --mark-dups \
         --output-stats {stat_file}.prog \
-        --output {dedup_pairsam}.prog \
+        --output {file_name}.prog.pairsam \
         {sorted_pairsam}
     
     mv {stat_file}.prog {stat_file}
-    mv {dedup_pairsam}.prog {dedup_pairsam}
+    mv {file_name}.prog.pairsam {dedup_pairsam}
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(cores=options['cores'], stat_file=outputs['stat'], dedup_pairsam=outputs['dedup'], sorted_pairsam=inputs['pairsam'])
+    """.format(cores=options['cores'], stat_file=outputs['stat'], dedup_pairsam=outputs['dedup'], file_name=file_name, sorted_pairsam=inputs['pairsam'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def split_pairsam(pairsam_file: str):
@@ -555,9 +558,8 @@ def split_pairsam(pairsam_file: str):
         **Sorted** `PAIRSAM` file with `SAM` entries together with the Hi-C pair information.
     """
     inputs = {'pairsam': pairsam_file}
-    outputs = {'pairs': '{file_name}.pairs'.format(file_name=os.path.splitext(inputs['pairsam'])[0]),
-               'bam': '{file_name}.bam'.format(file_name=os.path.splitext(inputs['pairsam'])[0]),
-               'index': '{file_name}.bam.bai'.format(file_name=os.path.splitext(inputs['pairsam'])[0])}
+    file_name = '{}'.format(os.path.splitext(inputs['pairsam'])[0])
+    outputs = {'pairs': '{}.pairs'.format(file_name)}
     options = {
         'cores': 12,
         'memory': '96g',
@@ -581,33 +583,84 @@ def split_pairsam(pairsam_file: str):
     pairtools split \
         --nproc-in {cores} \
         --nproc-out {cores} \
-        --output-pairs {pairs}.prog \
-        --output-sam {file_name}.sam \
+        --output-pairs {file_name}.prog.pairs \
         {pairsam}
-
-    samtools sort \
-        -@ {cores} \
-        -T "$temp_dir" \
-        -O BAM \
-        -o {bam}.prog \
-        {file_name}.sam
     
-    samtools index \
-        -@ {cores} \
-        -b \
-        -o {index}.prog \
-        {bam}.prog
-    
-    mv {pairs}.prog {pairs}
-    mv {bam}.prog {bam}
-    mv {index}.prog {index}
+    mv {file_name}.prog.pairs {pairs}
         
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(cores=options['cores'], pairsam=inputs['pairsam'], pairs=outputs['pairs'], file_name=os.path.splitext(inputs['pairsam'])[0], bam=outputs['bam'], index=outputs['index'])
+    """.format(cores=options['cores'], pairsam=inputs['pairsam'], pairs=outputs['pairs'], file_name=file_name)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def juicer_hic_matrix(pairs_file: str, chrom_sizes: str, juicer_script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
+# def split_pairsam(pairsam_file: str):
+#     """
+#     Template: Splits `PAIRSAM` file into a `BAM` file and a *.pairs* file using `pairtools split`.
+    
+#     Template I/O::
+
+#         inputs = {'pairsam': pairsam_file}
+
+#         outputs = {'pairs': *.pairs,
+#                    'bam': *.bam,
+#                    'index': *.bam.bai}
+    
+#     :param str pairsam_file:
+#         **Sorted** `PAIRSAM` file with `SAM` entries together with the Hi-C pair information.
+#     """
+#     inputs = {'pairsam': pairsam_file}
+#     file_name = '{}'.format(os.path.splitext(inputs['pairsam'])[0])
+#     outputs = {'pairs': '{}.pairs'.format(file_name),
+#                'bam': '{}.bam'.format(file_name),
+#                'index': '{}.bam.bai'.format(file_name)}
+#     options = {
+#         'cores': 12,
+#         'memory': '96g',
+#         'walltime': '12:00:00'
+#     }
+#     spec = """
+#     # Sources environment
+#     if [ "$USER" == "jepe" ]; then
+#         source /home/"$USER"/.bashrc
+#         source activate omni_c
+#     fi
+    
+#     echo "START: $(date)"
+#     echo "JobID: $SLURM_JOBID"
+    
+#     temp_dir="$(dirname {pairsam})"/temp
+#     if [ ! -e "$temp_dir" ]; then
+#         mkdir -m 775 "$temp_dir"
+#     fi
+
+#     pairtools split \
+#         --nproc-in {cores} \
+#         --nproc-out {cores} \
+#         --output-pairs {file_name}.prog.pairs \
+#         --output-sam - \
+#         {pairsam} 
+#     | samtools sort \
+#         -@ {cores} \
+#         -T "$temp_dir" \
+#         -O BAM \
+#         -o {file_name}.prog.bam
+    
+#     samtools index \
+#         -@ {cores} \
+#         -b \
+#         -o {file_name}.prog.bam.bai \
+#         {file_name}.prog.bam
+    
+#     mv {file_name}.prog.pairs {pairs}
+#     mv {file_name}.prog.bam {bam}
+#     mv {file_name}.prog.bam.bai {index}
+        
+#     echo "END: $(date)"
+#     echo "$(jobinfo "$SLURM_JOBID")"
+#     """.format(cores=options['cores'], pairsam=inputs['pairsam'], pairs=outputs['pairs'], file_name=file_name, bam=outputs['bam'], index=outputs['index'])
+#     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def juicer_hic_matrix(pairs_file: str, reference_genome: str, juicer_script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
     """
     Template:Create Hi-C contact matrix from a *.pairs* file using :script:`juicer_tools pre`.
     
@@ -626,8 +679,9 @@ def juicer_hic_matrix(pairs_file: str, chrom_sizes: str, juicer_script: str = '/
         Path to *juicer_tools.jar*. By default should lead to *juicer_tools.jar* in workflow_source directory.
     """
     inputs = {'pairs': pairs_file,
-              'chrom_sizes': chrom_sizes}
-    outputs = {'hic': '{path}/{base_name}.init_contact_map.hic'.format(path=os.path.dirname(inputs['pairs']), base_name=os.path.basename(inputs['pairs']).split(sep='.')[0])}
+              'reference_genome': reference_genome}
+    file_name = '{path}/{base_name}.init_contact_map'.format(path=os.path.dirname(inputs['pairs']), base_name=os.path.basename(inputs['pairs']).split(sep='.')[0])
+    outputs = {'hic': '{}.hic'.format(file_name)}
     options = {
         'cores': 12,
         'memory': '100g',
@@ -643,23 +697,22 @@ def juicer_hic_matrix(pairs_file: str, chrom_sizes: str, juicer_script: str = '/
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
-    export _JAVA_OPTIONS="-Xms{mem} -Xmx{mem}"
+    export _JAVA_OPTIONS="-Xms100G -Xmx100G"
 
     java \
-        -Xms {mem} \
-        -Djava.awt.headless=true -jar {juicer_script} \
+        -Djava.awt.headless=true \
         -jar {juicer_script} \
             pre \
             --threads {cores} \
             {pairs} \
-            {hic_matrix}.prog \
-            {chrom_sizes}
+            {file_name}.prog.hic \
+            {reference_genome}
     
-    mv {hic_matrix}.prog {hic_matrix}
+    mv {file_name}.prog.hic {hic_matrix}
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(mem=options['memory'], juicer_script=juicer_script, cores=options['cores'], pairs=inputs['pairs'], hic_matrix=outputs['hic'], chrom_sizes=inputs['chrom_sizes'])
+    """.format(mem=options['memory'], juicer_script=juicer_script, cores=options['cores'], pairs=inputs['pairs'], file_name=file_name, hic_matrix=outputs['hic'], reference_genome=inputs['reference_genome'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 

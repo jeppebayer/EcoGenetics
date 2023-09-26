@@ -136,7 +136,7 @@ def create_vcf_per_chr_pooled(region: str, num: int, reference_genome: str, samp
             -O u \
             - \
         | bcftools filter \
-            -e 'TYPE~"del" || TYPE~"ins" || TYPE~"complex"' \
+            -e 'INFO/TYPE~"del" || INFO/TYPE~"ins" || INFO/TYPE~"complex"' \
             -O u \
             - \
             > {temp_dir}/{num}_{sample_name}_{region}_prog.bcf
@@ -403,7 +403,7 @@ def vcf_per_chr_pooled_all_rep(reference_genome: str, sample_list: str, repeat_r
             -O u \
             - \
         | bcftools filter \
-            -e 'TYPE~"del" || TYPE~"ins" || TYPE~"complex"' \
+            -e 'INFO/TYPE~"del" || INFO/TYPE~"ins" || INFO/TYPE~"complex"' \
             -O u \
             - \
             > {bcf}.prog
@@ -490,7 +490,7 @@ def vcf_per_chr_pooled_all_no_rep(reference_genome: str, sample_list: str, worki
             -O u \
             - \
         | bcftools filter \
-            -e 'TYPE~"del" || TYPE~"ins" || TYPE~"complex"' \
+            -e 'INFO/TYPE~"del" || INFO/TYPE~"ins" || INFO/TYPE~"complex"' \
             -O u \
             - \
             > {bcf}.prog

@@ -1,0 +1,24 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Alignment name. The name used for directory structure and file prefix.
+alignment_name: stegodyphus
+# Name of species being worked on. Must be listed in same order as respective genomes.
+species_list:
+- stegodyphus_bicolor
+- stegodyphus_dumicola
+- stegodyphus_lineatus
+- stegodyphus_mimosarum
+- stegodyphus_sarasinorum
+- stegodyphus_tentriicola
+# Path to reference genome files (FASTA format). Must be listed in same order as respective species name.
+genome_list:
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_bicolor/BI_hifi_hic_scaffolded_trim.fa
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_dumicola/DUM_hifi_hic_scaffolded_trim.fa
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_lineatus/LIN_hifi_hic_scaffolded_trim.fa
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_mimosarum/MIM_hifi_hic_scaffolded_trim.fa
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_sarasinorum/SARA_hifi_hic_scaffolded_trim.fa
+- /faststorage/project/EcoGenetics/people/Jeppe_Bayer/X_evolution/data/genomes/reference_genomes/Stegodyphus_tentoriicola/TENT_hifi_hic_scaffolded_trim.fa
+# Phylogenetic tree in NEWICK format. Names in phylogenetic tree be identical to those in species list.
+newick_tree: ((((stegodyphus_bicolor, stegodyphus_sarasinorum), (stegodyphus_tentriicola, stegodyphus_dumicola)), stegodyphus_mimosarum), stegodyphus_lineatus);
+# Directory for intermidiary files and various statistics.
+working_directory_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
