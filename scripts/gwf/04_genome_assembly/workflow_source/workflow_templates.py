@@ -662,7 +662,7 @@ def split_pairsam(pairsam_file: str):
 
 def juicer_hic_matrix(pairs_file: str, reference_genome: str, juicer_script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
     """
-    Template:Create Hi-C contact matrix from a *.pairs* file using :script:`juicer_tools pre`.
+    Template: Create Hi-C contact matrix from a *.pairs* file using :script:`juicer_tools pre`.
     
     Template I/O::
 
@@ -838,65 +838,41 @@ def post_review_export(review_file: str, fasta_file: str, merged_no_dup: str, ch
 
 
 
-# TODO Fix
-# def hifiadapterfilt(pacbio_hifi_reads: str, HiFiAdapterFilt_path: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/HiFiAdapterFilt'):
-#     """Template for running HiFiAdapterFilt to remove remaining adapters specifically from PacBio HiFi reads."""
-#     hifiadapterfilt_directory = '/home/jepe/software/HiFiAdapterFilt'
-#     output_dir = '{}/HiFiAdapterFilt'.format(os.path.dirname(pacbio_hifi_reads))
-#     inputs = {'pb_hifi': pacbio_hifi_reads}
-#     if inputs['pb_hifi'].endswith('.gz'):
-#         prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
-#         ext = 
-#     else:
-#         prefix = 
-#     outputs = {'filt': '{output_dir}/{prefix}.filt.fastq.gz'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-#                'cont': '{output_dir}/{prefix}.contaminant.blastout'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-#                'block': '{output_dir}/{prefix}.blocklist'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-#                'stats': '{output_dir}/{prefix}.stats'.format(output_dir=output_dir, prefix=os.path.basename(prefix))}
-#     options = {
-#         'cores': 10,
-#         'memory': '100g',
-#         'walltime': '120'
-#     }
-#     spec = """
-#     # Sources environment
-#     if [ "$USER" == "jepe" ]; then
-#         source /home/"$USER"/.bashrc
-#         source activate genome_assembly
-#     fi
+# Draft genome step 1
+def hifiadapterfilt(pacbio_hifi_reads: str, HiFiAdapterFilt_path: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/HiFiAdapterFilt'):
+    """
+    Template: Removes remaining adapters from PacBio HiFi reads using :script:`HiFiAdapterFilt`.
+
+    Template I/O::
+
+        inputs = {'pb_hifi': pacbio_hifi_reads}
+
+        outputs = {'filt': *.filt.fastq.gz,
+                   'cont': *.contaminant.blastout,
+                   'block': *.blocklist,
+                   'stats': *.stats}
     
-#     echo "START: $(date)"
-#     echo "JobID: $SLURM_JOBID"
-    
-#     export PATH=$PATH:{hifiadapterfilt_dir}
-#     export PATH=$PATH:{hifiadapterfilt_dir}/DB
-
-#     cp {pacbiohifi} "$(dirname({pacbiohifi}))"/prog.{ext}
-
-#     bash {hifiadapterfilt_dir}/pbadapterfilt.sh \
-#         -t {cores} \
-#         -p prog \
-#         -o {output_dir}
-        
-#     mv {output_dir}/prog.filt.fastq.gz {filt}
-#     mv {output_dir}/prog.contaminant.blastout {cont}
-#     mv {output_dir}/prog.blocklist {block}
-#     mv {output_dir}/prog.stats {stats}
-#     rm "$(dirname({pacbiohifi}))"/prog.{ext}
-        
-#     echo "END: $(date)"
-#     echo "$(jobinfo "$SLURM_JOBID")"
-#     """.format(pacbiohifi=inputs['pbhifi'], hifiadapterfilt_dir=hifiadapterfilt_directory, ext=ext, cores=options['cores'], prefix=prefix, output_dir=output_dir, filt=outputs['filt'], cont=outputs['cont'], block=outputs['block'], stats=outputs['stats'])
-#     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
-
-def kmer_count():
-    """Template for counting k'mers in genome sequence data"""
-    inputs = {}
-    outputs = {}
+    :param str pacbio_hifi_reads:
+        File containing PacBio HiFi reads (.bam | .fastq | .fastq.gz | .fq | .fq.gz).
+    :param str HiFiAdapterFilt_path:
+        Path to :script:`HiFiAdapterFilt` directory.
+    """
+    output_dir = '{}/HiFiAdapterFilt'.format(os.path.dirname(pacbio_hifi_reads))
+    inputs = {'pb_hifi': pacbio_hifi_reads}
+    if inputs['pb_hifi'].endswith('.gz'):
+        prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
+        ext = '{}.gz'.format(os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[1])
+    else:
+        prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
+        ext = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[1]
+    outputs = {'filt': '{output_dir}/{prefix}.filt.fastq.gz'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
+               'cont': '{output_dir}/{prefix}.contaminant.blastout'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
+               'block': '{output_dir}/{prefix}.blocklist'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
+               'stats': '{output_dir}/{prefix}.stats'.format(output_dir=output_dir, prefix=os.path.basename(prefix))}
     options = {
-        'cores': 32,
-        'memory': '480g',
-        'walltime': '240'
+        'cores': 10,
+        'memory': '100g',
+        'walltime': '02:00:00'
     }
     spec = """
     # Sources environment
@@ -908,13 +884,98 @@ def kmer_count():
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
+    export PATH=$PATH:{hifiadapterfilt_dir}
+    export PATH=$PATH:{hifiadapterfilt_dir}/DB
+
+    ln -s {pacbiohifi} "$(dirname({pacbiohifi}))"/prog.{ext}
+
+    bash {hifiadapterfilt}/pbadapterfilt.sh \
+        -t {cores} \
+        -p prog \
+        -o {output_dir}
+        
+    mv {output_dir}/prog.filt.fastq.gz {filt}
+    mv {output_dir}/prog.contaminant.blastout {cont}
+    mv {output_dir}/prog.blocklist {block}
+    mv {output_dir}/prog.stats {stats}
+    rm "$(dirname({pacbiohifi}))"/prog.{ext}
+        
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(pacbiohifi=inputs['pbhifi'], hifiadapterfilt=HiFiAdapterFilt_path, ext=ext, cores=options['cores'], prefix=prefix, output_dir=output_dir, filt=outputs['filt'], cont=outputs['cont'], block=outputs['block'], stats=outputs['stats'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+# Draft genome step 2 (variable)
+def kmer_analysis(genome_file: str, output_path: str, k: str =27, cannonical: bool = False, cutoff: int = 1000):
+    """
+    Template: Count number of k'mers in genome file using :script:`jellyfish count`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    output_path = '{}/kmer_analysis'.format(output_path)
+    inputs = {'genome': genome_file}
+    file_name = '{}'.format(os.path.basename(inputs['genome']))
+    outputs = {'counts': '{output_path}/{file_name}.kmer_count_{k}'.format(output_path=output_path, file_name=file_name, k=k),
+               'histo': '{output_path}/{file_name}.kmer_histo_{k}'.format(output_path=output_path, file_name=file_name, k=k),
+               'genomescope': ['{output_path}/genomescope2_{k}.{file_name}/{k}_linear_plot.png'.format(output_path=output_path, k=k, file_name=file_name),
+                               '{output_path}/genomescope2_{k}.{file_name}/{k}_log_plot.png'.format(output_path=output_path, k=k, file_name=file_name),
+                               '{output_path}/genomescope2_{k}.{file_name}/{k}_model.txt'.format(output_path=output_path, k=k, file_name=file_name),
+                               '{output_path}/genomescope2_{k}.{file_name}/{k}_progress.txt'.format(output_path=output_path, k=k, file_name=file_name),
+                               '{output_path}/genomescope2_{k}.{file_name}/{k}_summary.txt'.format(output_path=output_path, k=k, file_name=file_name),
+                               '{output_path}/genomescope2_{k}.{file_name}/{k}_transformed_linear_plot.png'.format(output_path=output_path, k=k, file_name=file_name),
+                               '{output_path}/genomescope2_{k}.{file_name}/{k}_transformed_log_plot.png'.format(output_path=output_path, k=k, file_name=file_name)]}
+    options = {
+        'cores': 32,
+        'memory': '480g',
+        'walltime': '12:00:00'
+    }
+    if inputs['genome'].endswith('.gz'):
+        input_file = '(zcat {})'.format(inputs['genome'])
+    else:
+        input_file = inputs['genome']
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate genome_assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {kmer_dir} ] || mkdir -m 775 {kmer_dir}
+
     jellyfish count \
         -t {cores} \
-        -m {kmer_length} {canonical} \
         -s 8G \
-        -o {count_file} \
-        <(zcat {sequence_file})
+        -m {k} \
+        -o {kmer_dir}/{file_name}.prog.kmer_count_{k} \
+        {input_file}
     
+    mv {kmer_dir}/{file_name}.prog.kmer_count_{k} {count_file}
+    
+    jellyfish histo \
+        -t {cores} \
+        -h {max_count} \
+        -o {kmer_dir}/{file_name}.prog.kmer_histo_{k} \
+        {count_file}
+
+    mv {kmer_dir}/{file_name}.prog.kmer_histo_{k} {histo_file}
+
+    [ -d {kmer_dir}/genomescope2_{k}.{filename} ] || mkdir -m 775 {kmer_dir}/genomescope2_{k}.{filename}
+
+    genomescope2 \
+        -i {histo_file} \
+        -p 2 \
+        -o {kmer_dir}/genomescope2_{k}.{filename} \
+        -k {k} \
+        -n {k} \
+
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """.format()

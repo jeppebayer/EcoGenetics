@@ -356,7 +356,7 @@ def vcf_per_chr_pooled_all_rep(reference_genome: str, sample_list: str, repeat_r
     options = {
         'cores': 1,
         'memory': '100g',
-        'walltime': '24:00:00'
+        'walltime': '48:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -446,7 +446,7 @@ def vcf_per_chr_pooled_all_no_rep(reference_genome: str, sample_list: str, worki
     options = {
         'cores': 1,
         'memory': '100g',
-        'walltime': '24:00:00'
+        'walltime': '48:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then

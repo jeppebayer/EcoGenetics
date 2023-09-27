@@ -26,7 +26,7 @@ def run_cactus(seqfile: str, file_prefix: str = 'msa', output_path: str = None):
     options = {
         'cores': 32,
         'memory': '128g',
-        'walltime': '24:00:00'
+        'walltime': '48:00:00'
     }
     spec = """
     # Sources environment
