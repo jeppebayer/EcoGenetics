@@ -1,5 +1,5 @@
 from gwf import Workflow
-import glob, yaml, os
+import glob, yaml, os, shutil
 from workflow_templates import *
 
 def multi_wga(config_file = glob.glob('*config.y*ml')[0]):

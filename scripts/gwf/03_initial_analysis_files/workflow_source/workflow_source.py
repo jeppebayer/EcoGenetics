@@ -156,7 +156,7 @@ def pooled_species_vcf_workflow(config_file = glob.glob('*config.y*ml')[0]):
     
     sample_list = gwf.glob('{}/*/*_filtered.bam'.format(SPECIES_DIR))
     sample_string = ' -b '.join(sample_list)
-    partitions = partition_chrom(parse_fasta=parse_fasta(REFERENCE_GENOME), size=200000)
+    partitions = partition_chrom(parse_fasta=parse_fasta(REFERENCE_GENOME), size=50000)
 
     # Directory setup
     top_dir = '{work_dir}/03_initial_analysis_files/{species_name}/all_populations'.format(work_dir=WORK_DIR, species_name=SPECIES_NAME.replace(' ', '_'))

@@ -38,6 +38,8 @@ def run_cactus(seqfile: str, file_prefix: str = 'msa', output_path: str = None):
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
+    [ -d {output_path}/tmp ] || mkdir -m 775 {output_path}/tmp
+
     cd /faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/06_genome_alignment/workflow_source/cactus-bin-v2.6.7
     source cactus_env/bin/activate
     cactus \
