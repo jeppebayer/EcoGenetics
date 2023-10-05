@@ -43,7 +43,7 @@ def partition_chrom(parse_fasta: list, size: int = 500000):
     Partitions `FASTA` file parsed with **parse_fasta**.
     
     Uses the list of dictionaries from **parse_fasta** to creates a list of dictionaries
-    containing with partition number, sequence name, start and end postion.
+    containing with partition number, sequence name, start and end postion (0 based).
     By default the partition size is 500kbs.
     
     ::
@@ -93,7 +93,7 @@ def create_vcf_per_chr_pooled(region: str, num: int, reference_genome: str, samp
     options = {
         'cores': 1,
         'memory': '100g',
-        'walltime': '18:00:00'
+        'walltime': '36:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -180,7 +180,7 @@ def create_vcf_per_chr_individual(region: str, num: int, reference_genome: str, 
     options = {
         'cores': 1,
         'memory': '100g',
-        'walltime': '24:00:00'
+        'walltime': '36:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -355,8 +355,8 @@ def vcf_per_chr_pooled_all_rep(reference_genome: str, sample_list: str, repeat_r
     outputs = {'region': '{work_dir}/tmp/{species_abbr}_{num}_{region}.bcf'.format(work_dir=working_directory, species_abbr=species_abbreviation(os.path.basename(os.path.dirname(working_directory))), num=num, region=region)}
     options = {
         'cores': 1,
-        'memory': '100g',
-        'walltime': '24:00:00'
+        'memory': '80g',
+        'walltime': '12:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -369,9 +369,7 @@ def vcf_per_chr_pooled_all_rep(reference_genome: str, sample_list: str, repeat_r
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
 
-    if [ ! -e {work_dir}/tmp ]; then
-        mkdir -m 775 {work_dir}/tmp
-    fi
+    [ -d {work_dir}/tmp ] || mkdir -m 775 {work_dir}/tmp
 
     check=$(freebayes \
         -f {reference_genome} \
@@ -380,7 +378,6 @@ def vcf_per_chr_pooled_all_rep(reference_genome: str, sample_list: str, repeat_r
         -r {region}:{start}-{end} \
         --min-alternate-fraction 0.05 \
         --min-alternate-count 2 \
-        --report-monomorphic \
         -b {sample_list} \
     | {check_vcf})
 
@@ -392,7 +389,6 @@ def vcf_per_chr_pooled_all_rep(reference_genome: str, sample_list: str, repeat_r
             -r {region}:{start}-{end} \
             --min-alternate-fraction 0 \
             --min-alternate-count 2 \
-            --report-monomorphic \
             --pooled-discrete  \
             -b {sample_list} \
         | SnpSift intervals \
@@ -415,7 +411,6 @@ def vcf_per_chr_pooled_all_rep(reference_genome: str, sample_list: str, repeat_r
             -r {region}:{start}-{end} \
             --min-alternate-fraction 0.05 \
             --min-alternate-count 2 \
-            --report-monomorphic \
             -b {sample_list} \
         | bcftools view \
         -O u \
@@ -445,8 +440,8 @@ def vcf_per_chr_pooled_all_no_rep(reference_genome: str, sample_list: str, worki
     outputs = {'region': '{work_dir}/tmp/{species_abbr}_{num}_{region}.bcf'.format(work_dir=working_directory, species_abbr=species_abbreviation(os.path.basename(os.path.dirname(working_directory))), num=num, region=region)}
     options = {
         'cores': 1,
-        'memory': '100g',
-        'walltime': '24:00:00'
+        'memory': '80g',
+        'walltime': '12:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -459,9 +454,7 @@ def vcf_per_chr_pooled_all_no_rep(reference_genome: str, sample_list: str, worki
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
 
-    if [ ! -e {work_dir}/tmp ]; then
-        mkdir -m 775 {work_dir}/tmp
-    fi
+    [ -d {work_dir}/tmp ] || mkdir -m 775 {work_dir}/tmp
 
     check=$(freebayes \
         -f {reference_genome} \
@@ -470,7 +463,6 @@ def vcf_per_chr_pooled_all_no_rep(reference_genome: str, sample_list: str, worki
         -r {region}:{start}-{end} \
         --min-alternate-fraction 0.05 \
         --min-alternate-count 2 \
-        --report-monomorphic \
         -b {sample_list} \
     | {check_vcf})
 
@@ -482,7 +474,6 @@ def vcf_per_chr_pooled_all_no_rep(reference_genome: str, sample_list: str, worki
             -r {region}:{start}-{end} \
             --min-alternate-fraction 0 \
             --min-alternate-count 2 \
-            --report-monomorphic \
             --pooled-discrete  \
             -b {sample_list} \
         | bcftools filter \
@@ -502,7 +493,6 @@ def vcf_per_chr_pooled_all_no_rep(reference_genome: str, sample_list: str, worki
             -r {region}:{start}-{end} \
             --min-alternate-fraction 0.05 \
             --min-alternate-count 2 \
-            --report-monomorphic \
             -b {sample_list} \
         | bcftools view \
         -O u \
