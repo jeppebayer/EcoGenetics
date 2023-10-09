@@ -99,6 +99,45 @@ def make_bed(partitions: list, output_directory: str = '.'):
 #     chr = os.path.splitext(os.path.basename(target.outputs['region']))[0].split('_', 1)[1]
 #     return 'VCF_{idx}_{chr}'.format(chr=chr, idx=idx+1)
 
+def bed_files(refrence_genome: str, size: int, output_directory: str, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/07_fst/workflow_source/make_bed.py'):
+    """
+    Template: Makes a series of :format:`BED`files according to chromosome.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'reference': refrence_genome,
+              'script': script}
+    outputs = {}
+    options = {
+        'cores': 1,
+        'memory': '16g',
+        'walltime': '00:30:00'
+    }
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate data_prep
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    python {script} \
+        {reference} \
+        {size} \
+        {output_dir}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format()
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
 def mpileup_parts(bam_files: list, reference_genome: str, partition: dict, species_name: str, output_directory: str = '.'):
     """
     Template: Create :format:`mpileup` files for each partition of reference genome from multiple :format:`BAM`files using :script:`samtools mpileup`.
@@ -146,6 +185,92 @@ def mpileup_parts(bam_files: list, reference_genome: str, partition: dict, speci
     echo "$(jobinfo "$SLURM_JOBID")"
     """.format(reference=reference_genome, bed_file=inputs['bed'], chromosome=partition['region'], file_name=file_name, bam_files=bam_string, mpileup=outputs['mpileup'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def mpileup2sync(mpileup_file: str, output_directory: str = None, mpileup2sync: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/07_fst/workflow_source/popoolation2_v1.201/mpileup2sync.pl'):
+    """
+    Template: Makes a :format:`sync` file for a corresponding :format:`mpileup` file using :script:`popoolation2`'s :script:`mpileup2sync.pl`
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    if output_directory is None:
+        output_directory = os.path.dirname(mpileup_file)
+    inputs = {'mpileup': mpileup_file}
+    file_name = '{output_path}/{filename}'.format(output_path=output_directory, filename=os.path.splitext(os.path.basename(mpileup_file))[0])
+    outputs = {'sync': '{}.sync'.format(file_name)}
+    options = {
+        'cores': 2,
+        'memory': '16g',
+        'walltime': '06:00:00'
+    }
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate data_prep
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    perl {mpileup2sync} \
+        --input {mpileup} \
+        --output {file_name}.prog.sync \
+        --fastq-type sanger
+    
+    mv {file_name}.prog.sync {sync}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(mpileup2sync=mpileup2sync, mpileup=mpileup_file, file_name=file_name, sync=outputs['sync'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def concat(files: list, output_name: str, output_directory: str = None):
+    """
+    Template: Name sorts and concatenates files.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'files': files}
+    if output_directory is None:
+        output_directory = os.path.dirname(files[0])
+    file_name = '{output_path}/{output_name}'.format(output_path=output_directory, output_name=output_name)
+    outputs = {'concat_file': '{file_name}{ext}'.format(file_name=file_name, ext=os.path.splitext(files[0])[1])}
+    options = {
+        'cores': 2,
+        'memory': '16g',
+        'walltime': '06:00:00'
+    }
+    protect = outputs['concat_file']
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate data_prep
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    cat \
+        {sorted_files} \
+        > {file_name}.prog{ext}
+    
+    mv {file_name}.prog{ext} {concat_file}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(sorted_files=' '.join(files.sort), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)
 
 ref_file = '/faststorage/project/EcoGenetics/BACKUP/reference_genomes/Entomobrya_nicoleti/EG_EntNic_16022023_genomic_nomask_noann.fna'
 

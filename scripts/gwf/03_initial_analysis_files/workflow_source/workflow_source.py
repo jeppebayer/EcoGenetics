@@ -24,8 +24,8 @@ def create_vcf_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
     # --------------------------------------------------
 
     config = yaml.safe_load(open(config_file))
-    ACCOUNT:str = config['account']
-    SPECIES_NAME:str = config['species_name']
+    ACCOUNT: str = config['account']
+    SPECIES_NAME: str = config['species_name']
     SAMPLE_LIST: list = config['sample_list']
     REFERENCE_GENOME: str = config['reference_genome_path']
     REPEAT_REGIONS: str | None = config['repeat_regions_bed']
