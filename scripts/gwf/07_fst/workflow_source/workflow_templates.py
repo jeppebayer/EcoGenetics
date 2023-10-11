@@ -88,18 +88,19 @@ def make_bed(partitions: list, output_directory: str = '.'):
     :param str output_directory:
         Directory for output :format:`BED`files.
     """
-    file_list = []
-    for part in partitions:
-        with open('{dir_path}/{num}.bed'.format(dir_path=output_directory, num=part['num']), 'w') as bed_file:
-            bed_file.write('{chrom}\t{start}\t{end}'.format(chrom=part['region'], start=part['start'], end=part['end']))
-        file_list.append('{dir_path}/{num}.bed'.format(dir_path=output_directory, num=part['num']))
-    return file_list
+    output_directory = '{}/tmp'.format(output_directory)
+    partition_w_bed = []
+    for partition in partitions:
+        partition_w_bed.append({'num': partition['num'], 'region': partition['region'], 'start': partition['start'], 'end': partition['end'], 'bed_file': '{dir_path}/{num}.bed'.format(dir_path=output_directory, num=partition['num'])})
+    return partition_w_bed
 
-# def name_vcf(idx, target):
-#     chr = os.path.splitext(os.path.basename(target.outputs['region']))[0].split('_', 1)[1]
-#     return 'VCF_{idx}_{chr}'.format(chr=chr, idx=idx+1)
+def name_mpileup(idx, target):
+    return 'mpileup_{idx}'.format(idx=idx+1)
 
-def bed_files(refrence_genome: str, size: int, output_directory: str, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/07_fst/workflow_source/make_bed.py'):
+def name_sync(idx, target):
+    return 'sync_{idx}'.format(idx=idx+1)
+
+def bed_files(refrence_genome: str, size: int, output_directory: str = '.', script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/07_fst/workflow_source/make_bed.py'):
     """
     Template: Makes a series of :format:`BED`files according to chromosome.
     
@@ -110,9 +111,9 @@ def bed_files(refrence_genome: str, size: int, output_directory: str, script: st
     
     :param
     """
-    inputs = {'reference': refrence_genome,
-              'script': script}
-    outputs = {}
+    output_directory='{}/tmp'.format(output_directory)
+    inputs = {'reference': refrence_genome}
+    outputs = {'beds': make_bed(partitions=partition_chrom(parse_fasta=parse_fasta(refrence_genome), size=size), output_directory=output_directory)}
     options = {
         'cores': 1,
         'memory': '16g',
@@ -128,6 +129,8 @@ def bed_files(refrence_genome: str, size: int, output_directory: str, script: st
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
+    [ -d {output_dir} ] || mkdir -p {output_dir}
+
     python {script} \
         {reference} \
         {size} \
@@ -135,10 +138,10 @@ def bed_files(refrence_genome: str, size: int, output_directory: str, script: st
     
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format()
+    """.format(script=script, reference=refrence_genome, size=size, output_dir=output_directory)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def mpileup_parts(bam_files: list, reference_genome: str, partition: dict, species_name: str, output_directory: str = '.'):
+def mpileup_parts(bam_files: list, reference_genome: str, species_name: str, region: str, num: int, start: int, end: int, output_directory: str = '.'):
     """
     Template: Create :format:`mpileup` files for each partition of reference genome from multiple :format:`BAM`files using :script:`samtools mpileup`.
     
@@ -149,10 +152,10 @@ def mpileup_parts(bam_files: list, reference_genome: str, partition: dict, speci
     
     :param
     """
+    output_directory = '{}/tmp'.format(output_directory)
     inputs = {'bam_files': bam_files,
-              'reference': reference_genome,
-              'bed': '{output_path}/{num}.bed'.format(output_path=output_directory, num=partition['num'])}
-    file_name = '{output_path}/{abbr}_{num}_{chrom}'.format(output_path=output_directory, abbr=species_abbreviation(species_name), num=partition['num'], chrom=partition['region'])
+              'reference': reference_genome}
+    file_name = '{output_path}/{abbr}_{num}_{chrom}'.format(output_path=output_directory, abbr=species_abbreviation(species_name), num=num, chrom=region)
     outputs = {'mpileup': '{file_name}.mpileup'.format(file_name=file_name)}
     options = {
         'cores': 1,
@@ -170,10 +173,16 @@ def mpileup_parts(bam_files: list, reference_genome: str, partition: dict, speci
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
+    sleep 5m
+
+    [ -d {output_dir} ] || mkdir -p {output_dir}
+
+    echo -e '{chromosome}\t{start}\t{end}' > {output_dir}/{num}.bed
+    
     samtools mpileup \
         --max-depth 0 \
         --fasta-ref {reference} \
-        --positions {bed_file} \
+        --positions {output_dir}/{num}.bed \
         --min-BQ 0 \
         --region {chromosome} \
         --output {file_name}.prog.mpileup \
@@ -183,7 +192,7 @@ def mpileup_parts(bam_files: list, reference_genome: str, partition: dict, speci
     
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(reference=reference_genome, bed_file=inputs['bed'], chromosome=partition['region'], file_name=file_name, bam_files=bam_string, mpileup=outputs['mpileup'])
+    """.format(output_dir=output_directory, chromosome=region, start=start, end=end, num=num, reference=reference_genome, file_name=file_name, bam_files=bam_string, mpileup=outputs['mpileup'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def mpileup2sync(mpileup_file: str, output_directory: str = None, mpileup2sync: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/07_fst/workflow_source/popoolation2_v1.201/mpileup2sync.pl'):
@@ -241,6 +250,7 @@ def concat(files: list, output_name: str, output_directory: str = None):
     :param
     """
     inputs = {'files': files}
+    files.sort
     if output_directory is None:
         output_directory = os.path.dirname(files[0])
     file_name = '{output_path}/{output_name}'.format(output_path=output_directory, output_name=output_name)
@@ -269,9 +279,5 @@ def concat(files: list, output_name: str, output_directory: str = None):
     
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(sorted_files=' '.join(files.sort), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'])
+    """.format(sorted_files=' '.join(files), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)
-
-ref_file = '/faststorage/project/EcoGenetics/BACKUP/reference_genomes/Entomobrya_nicoleti/EG_EntNic_16022023_genomic_nomask_noann.fna'
-
-make_bed(partition_chrom(parse_fasta(ref_file)))
