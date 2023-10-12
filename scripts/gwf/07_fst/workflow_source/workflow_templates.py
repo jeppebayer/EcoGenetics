@@ -70,99 +70,50 @@ def partition_chrom(parse_fasta: list, size: int = 500000):
         num += 1
     return chrom_partition
 
-def make_bed(partitions: list, output_directory: str = '.'):
-    """
-    Creates :format:`BED` file for each partition from **partition_chrom**.
-
-    Uses the partitions from **partition_chrom** to create a series of :format:`BED` files for each partition.
-    The :format:`BED`files will be named: 'num'.bed, where 'num' corresponds to the partitions number.
-    Each :format:`BED`files contains one line with three tab-separated columns: 'chromosome', 'start', 'end', with coordinates being 0-based.
-    Returns list of all files created.
-
-    ::
-
-        return ['1.bed', '2.bed',... 'n.bed']
-
-    :param list partitions:
-        List of dictionaries produced by **partitions_chrom**
-    :param str output_directory:
-        Directory for output :format:`BED`files.
-    """
-    output_directory = '{}/tmp'.format(output_directory)
-    partition_w_bed = []
-    for partition in partitions:
-        partition_w_bed.append({'num': partition['num'], 'region': partition['region'], 'start': partition['start'], 'end': partition['end'], 'bed_file': '{dir_path}/{num}.bed'.format(dir_path=output_directory, num=partition['num'])})
-    return partition_w_bed
-
 def name_mpileup(idx, target):
     return 'mpileup_{idx}'.format(idx=idx+1)
 
 def name_sync(idx, target):
     return 'sync_{idx}'.format(idx=idx+1)
 
-def bed_files(refrence_genome: str, size: int, output_directory: str = '.', script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/07_fst/workflow_source/make_bed.py'):
-    """
-    Template: Makes a series of :format:`BED`files according to chromosome.
-    
-    Template I/O::
-    
-        inputs = {}
-        outputs = {}
-    
-    :param
-    """
-    output_directory='{}/tmp'.format(output_directory)
-    inputs = {'reference': refrence_genome}
-    outputs = {'beds': make_bed(partitions=partition_chrom(parse_fasta=parse_fasta(refrence_genome), size=size), output_directory=output_directory)}
-    options = {
-        'cores': 1,
-        'memory': '16g',
-        'walltime': '00:30:00'
-    }
-    spec = """
-    # Sources environment
-    if [ "$USER" == "jepe" ]; then
-        source /home/"$USER"/.bashrc
-        source activate data_prep
-    fi
-    
-    echo "START: $(date)"
-    echo "JobID: $SLURM_JOBID"
-    
-    [ -d {output_dir} ] || mkdir -p {output_dir}
-
-    python {script} \
-        {reference} \
-        {size} \
-        {output_dir}
-    
-    echo "END: $(date)"
-    echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(script=script, reference=refrence_genome, size=size, output_dir=output_directory)
-    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
-
 def mpileup_parts(bam_files: list, reference_genome: str, species_name: str, region: str, num: int, start: int, end: int, output_directory: str = '.'):
     """
-    Template: Create :format:`mpileup` files for each partition of reference genome from multiple :format:`BAM`files using :script:`samtools mpileup`.
+    Template: Create :format:`mpileup` files for each partition of reference genome from multiple :format:`BAM` files using :script:`samtools mpileup`.
     
     Template I/O::
     
-        inputs = {}
-        outputs = {}
+        inputs = {'bam_files': bam_files,
+                  'reference': reference_genome}
+        outputs = {'mpileup': *.mpileup}
     
-    :param
+    :param list bam_files:
+        List of all :format:`BAM` files to be included in :format:`mpileup` file.
+    :param str reference_genome:
+        Path to genome reference file in `FASTA`format.
+    :param str species_name:
+        Name of species being worked on.
+    :param str region:
+        Name of chromosome from **partition_chrom**.
+    :param int num:
+        Partition number from **partition_chrom**.
+    :param int start:
+        Start position from **partition_chrom**.
+    :param int end:
+        End position from **partition_chrom**.
+    :param str output_directory:
+        Path to desired output directory. Defaults to current directory. Always creates 'tmp' directory in output directory.
     """
     output_directory = '{}/tmp'.format(output_directory)
+    file_name = '{output_path}/{abbr}_{num}_{chrom}'.format(output_path=output_directory, abbr=species_abbreviation(species_name), num=num, chrom=region)
+    bam_string = ' '.join(bam_files)
     inputs = {'bam_files': bam_files,
               'reference': reference_genome}
-    file_name = '{output_path}/{abbr}_{num}_{chrom}'.format(output_path=output_directory, abbr=species_abbreviation(species_name), num=num, chrom=region)
     outputs = {'mpileup': '{file_name}.mpileup'.format(file_name=file_name)}
     options = {
         'cores': 1,
         'memory': '16g',
         'walltime': '10:00:00'
     }
-    bam_string = ' '.join(bam_files)
     spec = """
     # Sources environment
     if [ "$USER" == "jepe" ]; then
@@ -173,7 +124,7 @@ def mpileup_parts(bam_files: list, reference_genome: str, species_name: str, reg
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
-    sleep 5m
+    sleep 2m
 
     [ -d {output_dir} ] || mkdir -p {output_dir}
 
@@ -201,15 +152,20 @@ def mpileup2sync(mpileup_file: str, output_directory: str = None, mpileup2sync: 
     
     Template I/O::
     
-        inputs = {}
-        outputs = {}
+        inputs = {'mpileup': mpileup_file}
+        outputs = {'sync': *.sync}
     
-    :param
+    :param str mpileup_file:
+        Input :format:`mpileup` file.
+    :param str output_directory:
+        Desired output directory for :format:`sync` file. Defaults to directory of mpileup_file.
+    :param str mpileup2sync:
+        Path to :script:`mpile2sync.pl`.
     """
     if output_directory is None:
         output_directory = os.path.dirname(mpileup_file)
-    inputs = {'mpileup': mpileup_file}
     file_name = '{output_path}/{filename}'.format(output_path=output_directory, filename=os.path.splitext(os.path.basename(mpileup_file))[0])
+    inputs = {'mpileup': mpileup_file}
     outputs = {'sync': '{}.sync'.format(file_name)}
     options = {
         'cores': 2,
@@ -238,23 +194,33 @@ def mpileup2sync(mpileup_file: str, output_directory: str = None, mpileup2sync: 
     """.format(mpileup2sync=mpileup2sync, mpileup=mpileup_file, file_name=file_name, sync=outputs['sync'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def concat(files: list, output_name: str, output_directory: str = None):
+def concat(files: list, output_name: str, output_directory: str = None, compress: bool = False):
     """
-    Template: Name sorts and concatenates files.
+    Template: Name-sorts and concatenates files. Optionally compresses output using :script:`gzip`.
     
     Template I/O::
     
-        inputs = {}
-        outputs = {}
+        inputs = {'files': files}
+        outputs = {'concat_file': output_name.ext | output_name.ext.gzip}
     
-    :param
+    :param list files:
+        List containing files to concatenate.
+    :param str output_name:
+        Desired name of output file, no extension.
+    :param str output_directory:
+        Path to output directory. Default uses directory of first file in file_list.
+    :param bool compress:
+        Bool indicating whether the output file should be compressed or not.
     """
-    inputs = {'files': files}
     files.sort
     if output_directory is None:
         output_directory = os.path.dirname(files[0])
     file_name = '{output_path}/{output_name}'.format(output_path=output_directory, output_name=output_name)
-    outputs = {'concat_file': '{file_name}{ext}'.format(file_name=file_name, ext=os.path.splitext(files[0])[1])}
+    inputs = {'files': files}
+    if compress:
+        outputs = {'concat_file': '{file_name}{ext}.gzip'.format(file_name=file_name, ext=os.path.splitext(files[0])[1])}
+    else:
+        outputs = {'concat_file': '{file_name}{ext}'.format(file_name=file_name, ext=os.path.splitext(files[0])[1])}
     options = {
         'cores': 2,
         'memory': '16g',
@@ -271,13 +237,24 @@ def concat(files: list, output_name: str, output_directory: str = None):
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
-    cat \
-        {sorted_files} \
-        > {file_name}.prog{ext}
-    
-    mv {file_name}.prog{ext} {concat_file}
-    
+    if [ {compress} == 'False' ]; then
+        cat \
+            {sorted_files} \
+            > {file_name}.prog{ext}
+        
+        mv {file_name}.prog{ext} {concat_file}
+    else
+        cat \
+            {sorted_files} \
+        | gzip \
+            -c \
+            - \
+            > {file_name}.prog{ext}.gzip
+        
+        mv {file_name}.prog{ext}.gzip {concat_file}
+    fi
+
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(sorted_files=' '.join(files), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'])
+    """.format(compress=compress, sorted_files=' '.join(files), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)

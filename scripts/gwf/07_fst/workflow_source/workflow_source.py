@@ -3,9 +3,11 @@ from gwf.workflow import collect
 from workflow_templates import *
 import glob, yaml, os
 
-def fst_workflow(config_file = glob.glob('*config.y*ml')[0]):
+def fst_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
     """
-    Template: description
+    Workflow: Creates :format:`mpileup`file and corresponding :format:`sync` file for a list of :format:`BAM` alignment files.
+    Partitions reference genome and creates a small :format:`mpileup` file for each partition and for each of these creates a small :format:`sync` file.
+    When files for each partition has been made concatenates all parts into a single :format:`mpileup` file and a single :format:`sync` file.
     
     :param str config_file:
         Configuration file containing pre-defined set of variables
@@ -30,24 +32,14 @@ def fst_workflow(config_file = glob.glob('*config.y*ml')[0]):
         defaults={'account': ACCOUNT}
     )
     
-    size=200000
-    partitions = partition_chrom(parse_fasta=parse_fasta(REFERENCE_GENOME), size=size)
+    # Partitions reference genome
+    partitions = partition_chrom(parse_fasta=parse_fasta(REFERENCE_GENOME), size=200000)
     
+    # Directory setup
     top_dir = '{work_dir}/07_fst/{species_name}'.format(work_dir=WORK_DIR, species_name=SPECIES_NAME.replace(' ', '_'))
     os.makedirs(top_dir, exist_ok=True)
     output_dir = '{output_path}/{species_abbr}'.format(output_path=OUTPUT_DIR, species_abbr=species_abbreviation(SPECIES_NAME))
     os.makedirs(output_dir, exist_ok=True)
-
-    # bed_partition = make_bed(partitions, output_directory=top_dir)
-
-    # beds = gwf.target_from_template(
-    #     name='BED_files',
-    #     template=bed_files(
-    #         refrence_genome=REFERENCE_GENOME,
-    #         size=size,
-    #         output_directory=top_dir
-    #     )
-    # )
 
     mpileup = gwf.map(
         name=name_mpileup,
