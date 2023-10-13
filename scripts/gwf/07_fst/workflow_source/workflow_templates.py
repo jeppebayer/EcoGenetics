@@ -212,7 +212,7 @@ def concat(files: list, output_name: str, output_directory: str = None, compress
     :param bool compress:
         Bool indicating whether the output file should be compressed or not.
     """
-    files.sort
+    files.sort()
     if output_directory is None:
         output_directory = os.path.dirname(files[0])
     file_name = '{output_path}/{output_name}'.format(output_path=output_directory, output_name=output_name)

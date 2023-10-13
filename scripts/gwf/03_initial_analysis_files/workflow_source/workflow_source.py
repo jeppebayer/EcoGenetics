@@ -201,3 +201,103 @@ def pooled_species_vcf_workflow(config_file = glob.glob('*config.y*ml')[0]):
             )
         )
     return gwf
+
+def vcf_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
+    """
+    Workflow: description
+    
+    :param str config_file:
+        Configuration file containing pre-defined set of variables
+    """
+    # --------------------------------------------------
+    #                  Configuration
+    # --------------------------------------------------
+    
+    config = yaml.safe_load(open(config_file))
+    ACCOUNT: str = config['account']
+    SPECIES_NAME: str = config['species_name']
+    SAMPLE_LIST: list = config['sample_list']
+    REFERENCE_GENOME: str = config['reference_genome_path']
+    REPEAT_REGIONS: str | None = config['repeat_regions_bed']
+    if REPEAT_REGIONS == 'None':
+        REPEAT_REGIONS = None
+    TYPE: str = config['sequencing_type']
+    SNPEFF: bool = config['snpeff']
+    if SNPEFF == 'False':
+        SNPEFF = False
+    elif SNPEFF == 'True':
+        SNPEFF = True
+    WORK_DIR: str = config['working_directory_path']
+    PLOIDY: int = config['ploidy']
+    BESTN: int = config['bestn']
+    
+    # --------------------------------------------------
+    #                  Workflow
+    # --------------------------------------------------
+    
+    gwf = Workflow(
+        defaults={'account': ACCOUNT}
+    )
+    
+    partitions = partition_chrom_real(parse_fasta=parse_fasta(REFERENCE_GENOME), size=100000)
+
+    # Directory setup
+    # Defines and creates a species specific working directory with a folder for temporary files.
+    if TYPE == 'pooled':
+        # Pooled samples gets a 'sample folder'
+        sample_name = os.path.basename(os.path.dirname(SAMPLE_LIST[0]))
+        sample_dir = '/{}'.format(sample_name)
+        output_directory = os.path.dirname(SAMPLE_LIST[0])
+    elif TYPE == 'individual':
+        # Individually sequenced samples are grouped in VCF files by species, so no need for 'sample folder'
+        sample_name = species_abbreviation(SPECIES_NAME)
+        sample_dir = ""
+        output_directory = '{}/{}'.format(os.path.dirname(os.path.dirname(SAMPLE_LIST[0])), species_abbreviation(SPECIES_NAME))
+
+    top_dir = '{work_dir}/03_initial_analysis_files/{species_name}{sample}'.format(work_dir=WORK_DIR, species_name=SPECIES_NAME.replace(' ', '_'), sample=sample_dir)
+    os.makedirs(top_dir, exist_ok=True)
+    
+    if TYPE == 'individual':
+        vcf_parts = gwf.map(
+            template_func=vcf_per_chr_individual,
+            inputs=partitions,
+            name=vcf_name,
+            extra={'reference_genome': REFERENCE_GENOME,
+                'sample_list': SAMPLE_LIST,
+                'sample_name': sample_name,
+                'output_directory': top_dir,
+                'repeat_regions': REPEAT_REGIONS,
+                'ploidy': PLOIDY,
+                'bestn': BESTN})
+    elif TYPE == 'pooled':
+        vcf_parts = gwf.map(
+            template_func=vcf_per_chr_pooled,
+            inputs=partitions,
+            name=vcf_name,
+            extra={'reference_genome': REFERENCE_GENOME,
+                'sample_list': SAMPLE_LIST,
+                'sample_name': sample_name,
+                'output_directory': top_dir,
+                'repeat_regions': REPEAT_REGIONS,
+                'ploidy': PLOIDY,
+                'bestn': BESTN})
+        
+    concatenate = gwf.target_from_template(
+        name='VCF_concat_{}'.format(species_abbreviation(SPECIES_NAME)),
+        template=concat_vcf(
+            regions=collect(vcf_parts.outputs, ['region'])['regions'],
+            output_name=sample_name,
+            output_directory=output_directory
+        )
+    )
+    if SNPEFF is True:
+        snpeff = gwf.target_from_template(
+            name='snpEff_annotation_{}'.format(species_abbreviation(SPECIES_NAME)),
+            template=snpEff_ann(
+                vcf_file=concatenate.outputs['concat_vcf'],
+                reference_genome_version=os.path.splitext(os.path.basename(REFERENCE_GENOME))[0],
+                output_directory=output_directory
+            )
+        )
+
+    return gwf

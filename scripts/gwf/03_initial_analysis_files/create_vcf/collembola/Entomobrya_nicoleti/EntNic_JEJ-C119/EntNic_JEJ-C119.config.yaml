@@ -1,0 +1,22 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being worked on.
+species_name: Entomobrya nicoleti
+# Path to sample alignment file (BAM format). Can be a list with multiple entries or a single entry
+sample_list:
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Entomobrya_nicoleti/EntNic_JEJ-C119/EntNic_JEJ-C119_filtered.bam
+# Path to reference genome.
+reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Entomobrya_nicoleti/EG_EntNic_16022023_genomic_nomask_noann.fna
+# Path to BED formatted file containing repeat regions
+repeat_regions_bed: None
+# Whether or no to annotate VCF file with SNPeff (True | False). This only works if an SNPeff database entry has been made for the reference genome
+snpeff: False
+# Directory for intermidiary files and various statistics.
+working_directory_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
+# What type of sequencing has been used on the samples, individual sequencing or pooled sequencing (individual | pooled)
+sequencing_type: pooled
+# Ploidy of sample. If sample is pooled the value should equal the total number chromosome copies
+ploidy: 100
+# Freebayes is a haplotype-based variant caller. The value of 'bestn' is the max number of best alternative haplotypes to consider when more are available.
+# This is very time and memory intensive (don't use a value higher than 3).
+bestn: 3
