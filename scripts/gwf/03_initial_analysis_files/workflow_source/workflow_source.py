@@ -301,3 +301,88 @@ def vcf_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
         )
 
     return gwf
+
+########################## PoolSNP ##########################
+
+def poolsnp_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
+    """
+    Workflow: Create :format:`VCF`files based on :script:`PoolSNP`
+    
+    :param str config_file:
+        Configuration file containing pre-defined set of variables
+    """
+    # --------------------------------------------------
+    #                  Configuration
+    # --------------------------------------------------
+    
+    config = yaml.safe_load(open(config_file))
+    ACCOUNT: str = config['account']
+    SPECIES_NAME: str = config['species_name']
+    SAMPLE_LIST: list = config['sample_list']
+    REFERENCE_GENOME: str = config['reference_genome_path']
+    MPILEUP: str = config['mpileup_path']
+    WORKING_DIR: str = config['working_directory_path']
+    OUTPUT_DIR: str = config['output_directory_path']
+    MAXCOV: float = config['max_cov']
+    MINCOV: int = config['min_cov']
+    MINCOUNT: int = config['min_count']
+    MINFREQ: float = config['min_freq']
+    MISSFRAC: float = config['miss_frac']
+    BASEQUAL: int = config['bq']
+    ALLSITES: bool = config['all_sites']
+    if ALLSITES == 'True':
+        ALLSITES = 1,
+    elif ALLSITES == 'False':
+        ALLSITES = 0
+    
+    # --------------------------------------------------
+    #                  Workflow
+    # --------------------------------------------------
+    
+    gwf = Workflow(
+        defaults={'account': ACCOUNT}
+    )
+    
+    contigs = [{'contig': contig['sequence_name']} for contig in parse_fasta(REFERENCE_GENOME)]
+
+    top_dir = '{working_directory}/03_initial_analysis_files/{species_name}'.format(working_directory=WORKING_DIR, species_name=SPECIES_NAME.replace(' ', '_'))
+    output_dir = '{output_directory}/{species_abbr}'.format(output_directory=OUTPUT_DIR, species_abbr=species_abbreviation(SPECIES_NAME))
+
+    coverage_threshold = gwf.map(
+        name=name_cov,
+        template_func=max_cov,
+        inputs=contigs,
+        extra={'mpileup': MPILEUP,
+               'cutoff': MAXCOV,
+               'output_directory': top_dir}
+    )
+
+    concat_coverage = gwf.target_from_template(
+        name='concatenate_coverage',
+        template=concat(
+            files=collect(coverage_threshold.outputs, ['cutoff'])['cutoffs'],
+            output_name='{species_abbr}-cov-{max_cov}'.format(species_abbr=species_abbreviation(SPECIES_NAME), max_cov=MAXCOV),
+            output_directory=top_dir
+        )
+    )
+
+    run_poolsnp = gwf.target_from_template(
+        name='poolsnp',
+        template=poolsnp(
+            mpileup=MPILEUP,
+            max_cov=concat_coverage.outputs['concat_file'],
+            sample_list=SAMPLE_LIST,
+            reference_genome=REFERENCE_GENOME,
+            working_directory=top_dir,
+            species_name=SPECIES_NAME,
+            output_directory=output_dir,
+            min_cov=MINCOV,
+            min_count=MINCOUNT,
+            min_freq=MINFREQ,
+            miss_frac=MISSFRAC,
+            bq=BASEQUAL,
+            sites=ALLSITES
+        )
+    )
+
+    return gwf

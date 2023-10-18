@@ -1,0 +1,47 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being worked on.
+species_name: Entomobrya nicoleti
+# List of all sample names present in mpileup file
+sample_list:
+- EntNic_aaRJ_C225
+- EntNic_BIJ-C30
+- EntNic_DoeJ-C27
+- EntNic_DSJ-C190
+- EntNic_FUR-C230
+- EntNic_GEJ-C42
+- EntNic_GUS-C41
+- EntNic_HHJ-C162
+- EntNic_JEJ-C119
+- EntNic_JHJ-C220
+- EntNic_KoeJ-C212
+- EntNic_LVJ-C76
+- EntNic_MSJ-C2
+- EntNic_NOJ-C37
+- EntNic_SBJ-C52
+- EntNic_SKJ-C16
+- EntNic_ULJ-C60
+- EntNic_UTJ-C22
+- EntNic_VAJ-C24
+# Path to reference genome.
+reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Entomobrya_nicoleti/EG_EntNic_16022023_genomic_nomask_noann.fna
+# Path to mpileup file.
+mpileup_path: /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Entomobrya_nicoleti/EntNic/EntNic.mpileup
+# Directory for intermidiary files and various statistics.
+working_directory_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
+# Directory for output VCF.
+output_directory_path: /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Entomobrya_nicoleti
+# Maximum coverage cutoff value. the maximum coverage percentile to be computed.
+max_cov: 0.98
+# Sample-wise minimum coverage:
+min_cov: 1
+# Minimum alternative allele count across all populations pooled.
+min_count: 2
+# Minimum alternative allele frequency across all populations pooled.
+min_freq: 0.000001
+# Maximum allowed fraction of samples not fullfilling all parameters.
+miss_frac: 1
+# Minimum base quality for every nucleotide.
+bq: 15
+# Include all sites (or only polymorphic sites). True | False
+all_sites: True

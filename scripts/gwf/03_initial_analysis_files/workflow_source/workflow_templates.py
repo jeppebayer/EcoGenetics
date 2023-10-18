@@ -215,8 +215,8 @@ def create_vcf_per_chr_individual(region: str, num: int, reference_genome: str, 
     outputs = {'region': '{temp_dir}/{num}_{sample_name}_{region}.bcf'.format(region=region, num=num, temp_dir=temp_dir, sample_name=sample_name)}
     options = {
         'cores': 1,
-        'memory': '100g',
-        'walltime': '36:00:00'
+        'memory': '60g',
+        'walltime': '48:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -224,7 +224,7 @@ def create_vcf_per_chr_individual(region: str, num: int, reference_genome: str, 
         source activate vcf
     fi
 
-    export _JAVA_OPTIONS="-Xms100G -Xmx100G"
+    export _JAVA_OPTIONS="-Xms60G -Xmx60G"
     
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
@@ -885,3 +885,202 @@ def snpEff_ann(vcf_file: str, reference_genome_version: str, output_directory: s
     echo "$(jobinfo "$SLURM_JOBID")"
     """.format(stats=outputs['snpeff_stat'], snpeff_config=snpeff_config, snpEff_data=snpeff_data, reference_genome_version=reference_genome_version, vcf=vcf_file, file_name=file_name, ann_vcf=outputs['snpeff_vcf'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+########################## PoolSNP ##########################
+
+def name_cov(idx, target):
+    return '{}'.format(os.path.basename(target.outputs['cutoff']))
+
+def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/PoolSNP/scripts/max-cov.py'):
+    """
+    Template: Calculates coverage thresholds using :script:`max-cov.py`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    file_name = '{output_directory}/tmp/cov/cutoffs/{contig}'.format(output_directory=output_directory, contig=contig)
+    inputs = {'mpileup': mpileup}
+    outputs = {'cutoff': '{}.txt'.format(file_name)}
+    options = {
+        'cores': 1,
+        'memory': '10g',
+        'walltime': '10:00:00'
+    }
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory}/tmp/cov/cutoffs ] || mkdir -p {output_directory}/tmp/cov/cutoffs
+
+    awk \
+        -v contig={contig} \
+        '{{if ($1 == contig) {{print $0}}}}' \
+        {mpileup} \
+    | python {script} \
+        --mpileup - \
+        --cutoff {cutoff} \
+        --contig {contig} \
+        --out {file_name}.prog.txt
+    
+    mv {file_name}.prog.txt {cutoff_file}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(output_directory=output_directory, contig=contig, mpileup=mpileup, script=script, cutoff=cutoff, file_name=file_name, cutoff_file=outputs['cutoff'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def concat(files: list, output_name: str, output_directory: str = None, compress: bool = False):
+    """
+    Template: Name-sorts and concatenates files. Optionally compresses output using :script:`gzip`.
+    
+    Template I/O::
+    
+        inputs = {'files': files}
+        outputs = {'concat_file': output_name.ext | output_name.ext.gzip}
+    
+    :param list files:
+        List containing files to concatenate.
+    :param str output_name:
+        Desired name of output file, no extension.
+    :param str output_directory:
+        Path to output directory. Default uses directory of first file in file_list.
+    :param bool compress:
+        Bool indicating whether the output file should be compressed or not.
+    """
+    files.sort()
+    if output_directory is None:
+        output_directory = os.path.dirname(files[0])
+    file_name = '{output_path}/{output_name}'.format(output_path=output_directory, output_name=output_name)
+    inputs = {'files': files}
+    if compress:
+        outputs = {'concat_file': '{file_name}{ext}.gzip'.format(file_name=file_name, ext=os.path.splitext(files[0])[1])}
+    else:
+        outputs = {'concat_file': '{file_name}{ext}'.format(file_name=file_name, ext=os.path.splitext(files[0])[1])}
+    options = {
+        'cores': 2,
+        'memory': '16g',
+        'walltime': '06:00:00'
+    }
+    protect = outputs['concat_file']
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    if [ {compress} == 'False' ]; then
+        cat \
+            {sorted_files} \
+            > {file_name}.prog{ext}
+        
+        mv {file_name}.prog{ext} {concat_file}
+    else
+        cat \
+            {sorted_files} \
+        | gzip \
+            -c \
+            - \
+            > {file_name}.prog{ext}.gzip
+        
+        mv {file_name}.prog{ext}.gzip {concat_file}
+    fi
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(compress=compress, sorted_files=' '.join(files), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)
+
+def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str, working_directory: str, species_name: str, output_directory: str = None, min_cov: int = 10, min_count: int = 3, min_freq: float = 0.01, miss_frac: float = 0.1, bq: int = 15, sites: int = 1, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/PoolSNP/scripts/PoolSnp.py'):
+    """
+    Template: Creates :format:`VCF` file using :script:`PoolSnp.py`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    if output_directory is None:
+        output_directory = working_directory
+    inputs = {'mpileup': mpileup}
+    outputs = {'vcf': '{output_directory}/{species_abbr}.vcf.gz'.format(output_directory=output_directory, species_abbr=species_abbreviation(species_name))}
+    options = {
+        'cores': 20,
+        'memory': '160g',
+        'walltime': '10:00:00'
+    }
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {working_directory}/tmp ] || mkdir -p {working_directory}/tmp
+
+    headerfile={working_directory}/tmp/header.txt
+    echo -e '##fileformat=VCFv4.2' > "$headerfile"
+    echo -e '##fileDate=$(date +%d'/'%m'/'%y)' >> "$headerfile"
+    echo -e '##Source=PoolSnp-1.05' >> "$headerfile"
+    echo -e '##Parameters=<ID=MinCov,Number={min_cov},Type=Integer,Description=\"Minimum coverage per sample\">' >> "$headerfile"
+    echo -e '##Parameters=<ID=MaxCov,Number={max_cov},Type=Integer,Description=\"Maximum chromosome- and sample-specific maximum coverage; Either a precomputed file or the maximum percentile cutoff, eg. 0.95 to consider only reads within the 95% coverage percentile\">' >> "$headerfile"
+    echo -e '##Parameters=<ID=MinCount,Number={min_count},Type=Integer,Description=\"Minimum alternative allele count across all samples pooled\">' >> "$headerfile"
+    echo -e '##Parameters=<ID=MinFreq,Number={min_freq},Type=Float,Description=\"Minimum alternative allele frequency across all samples pooled\">' >> "$headerfile"
+    echo -e '##Parameters=<ID=MaximumMissingFraction,Number={miss_frac},Type=Float,Description=\"Maximum fraction of samples allowed that are not fullfilling all parameters\">' >> "$headerfile"
+    echo -e '##Parameters=<ID=BaseQual,Number={bq},Type=Integer,Description=\"Minimum PHRED scaled base quality\">' >> "$headerfile"
+    echo -e '##Reference={reference}' >> "$headerfile"
+    echo -e '##INFO=<ID=ADP,Number=1,Type=Integer,Description=\"Average per-sample depth of bases with Phred score >=$bq\">' >> "$headerfile"
+    echo -e '##INFO=<ID=NC,Number=1,Type=Integer,Description=\"Number of samples not called\">' >> "$headerfile"
+    echo -e '##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">' >> "$headerfile"
+    echo -e '##FORMAT=<ID=RD,Number=1,Type=Integer,Description=\"Reference Counts\">' >> "$headerfile"
+    echo -e '##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Alternative Counts\">' >> "$headerfile"
+    echo -e '##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">' >> "$headerfile"
+    echo -e '##FORMAT=<ID=FREQ,Number=1,Type=Float,Description=\"Variant allele frequency\">' >> "$headerfile"
+    echo -e '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{samples}' >> "$headerfile"
+
+    parallel \
+        -k \
+        -j  {cores} \
+        --pipepart \
+        --no-notice \
+        -a  {mpileup} \
+    --cat python {script} \
+        --mpileup  {{}} \
+        --min-cov {min_cov} \
+        --max-cov  {max_cov} \
+        --min-freq  {min_freq} \
+        --miss-frac  {miss_frac} \
+        --min-count  {min_count} \
+        --base-quality  {bq} \
+        --allsites {sites} \
+        >  {working_directory}/tmp/SNPs.prog.txt
+
+    mv {working_directory}/tmp/SNPs.prog.txt {working_directory}/tmp/SNPs.txt
+
+    cat {working_directory}/tmp/header.txt {working_directory}/tmp/SNPs.txt > {VCF}
+
+    rm -f {working_directory}/tmp/SNPs.prog.txt
+    rm -f {working_directory}/tmp/SNPs.txt
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(cores=options['cores'], mpileup=mpileup, script=script, working_directory=working_directory, output_directory=output_directory, min_cov=min_cov, max_cov=max_cov, min_count=min_count, min_freq=min_freq, miss_frac=miss_frac, bq=bq, reference=reference_genome, sites=sites, VCF=outputs['vcf'], samples='\t'.join(sample_list))
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
