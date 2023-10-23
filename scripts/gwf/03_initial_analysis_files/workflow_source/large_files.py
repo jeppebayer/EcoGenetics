@@ -13,7 +13,7 @@ def parse_mpileup(mpileup: str):
     line_num = 0
     for entry in mpileup:
         line_num += 1
-        entry = re.split(r' ', entry.rstrip(' '))[0]
+        entry = re.split(r'\s+', entry.rstrip(' '))[0]
         if entry != contig:
             if contig:
                 yield {'contig': contig, 'start': str(start), 'end': str(line_num - 1)}
@@ -21,7 +21,7 @@ def parse_mpileup(mpileup: str):
             contig = entry
     yield {'contig': contig, 'start': str(start), 'end': str(line_num)}
 
-def write_to_file(data, output: str):
+def write_dict_to_table(data, output: str):
     if os.path.exists(output):
         os.remove(output)
     header = None
@@ -31,7 +31,4 @@ def write_to_file(data, output: str):
                 header = outfile.write('{}\n'.format('\t'.join(list(entry.keys()))))
             outfile.write('{}\n'.format('\t'.join(list(entry.values()))))
 
-infile = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/test.mpileup'
-outfile = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/mpileup.index'
-
-write_to_file(parse_mpileup(load_data(infile)), outfile)
+write_dict_to_table(parse_mpileup(load_data(sys.argv[1])), sys.argv[2])

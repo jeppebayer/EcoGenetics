@@ -216,7 +216,7 @@ def create_vcf_per_chr_individual(region: str, num: int, reference_genome: str, 
     options = {
         'cores': 1,
         'memory': '60g',
-        'walltime': '48:00:00'
+        'walltime': '96:00:00'
     }
     spec = """
     if [ "$USER" == "jepe" ]; then
@@ -908,7 +908,7 @@ def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, scr
     options = {
         'cores': 1,
         'memory': '10g',
-        'walltime': '10:00:00'
+        'walltime': '18:00:00'
     }
     spec = """
     # Sources environment
