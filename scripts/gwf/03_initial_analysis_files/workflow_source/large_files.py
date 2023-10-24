@@ -2,6 +2,10 @@
 import os, sys, re
 
 def load_data(x):
+    """Loads data either from standard input or from argument position 1.
+    
+    :param any x:
+        Input data or '-'."""
     if x == '-':
         data = sys.stdin
     else:
@@ -9,6 +13,14 @@ def load_data(x):
     return data
 
 def parse_mpileup(mpileup: str):
+    """Parses :format:`mpileup` yielding dictionaries containing contig name and corresponding start and end line.
+    
+    ::
+    
+        yield {'contig': str, 'start': int, 'end': int}
+    
+    :param str mpileup:
+        Input :format:`mpileup` file."""
     contig = None
     line_num = 0
     for entry in mpileup:
@@ -21,7 +33,13 @@ def parse_mpileup(mpileup: str):
             contig = entry
     yield {'contig': contig, 'start': str(start), 'end': str(line_num)}
 
-def write_dict_to_table(data, output: str):
+def listdict_to_table(data: list, output: str):
+    """Writes list of dictionaries to :format:`text` file as table.
+    
+    :param list data:
+        List of dictionaries.
+    :param str output:
+        Output file path/name."""
     if os.path.exists(output):
         os.remove(output)
     header = None
@@ -31,4 +49,4 @@ def write_dict_to_table(data, output: str):
                 header = outfile.write('{}\n'.format('\t'.join(list(entry.keys()))))
             outfile.write('{}\n'.format('\t'.join(list(entry.values()))))
 
-write_dict_to_table(parse_mpileup(load_data(sys.argv[1])), sys.argv[2])
+listdict_to_table(parse_mpileup(load_data(sys.argv[1])), sys.argv[2])
