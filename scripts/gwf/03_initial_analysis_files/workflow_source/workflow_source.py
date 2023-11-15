@@ -319,6 +319,7 @@ def poolsnp_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
     ACCOUNT: str = config['account']
     SPECIES_NAME: str = config['species_name']
     SAMPLE_LIST: list = config['sample_list']
+    sample_names: list = [os.path.basename(os.path.dirname(path)) for path in SAMPLE_LIST]
     REFERENCE_GENOME: str = config['reference_genome_path']
     MPILEUP: str = config['mpileup_path']
     WORKING_DIR: str = config['working_directory_path']
@@ -343,16 +344,53 @@ def poolsnp_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
         defaults={'account': ACCOUNT}
     )
     
+    # Partitions reference genome
+    partitions = partition_chrom_real(parse_fasta=parse_fasta(REFERENCE_GENOME), size=200000)
+    # Creates list of contigs
     contigs = [{'contig': contig['sequence_name']} for contig in parse_fasta(REFERENCE_GENOME)]
 
     top_dir = '{working_directory}/03_initial_analysis_files/{species_name}'.format(working_directory=WORKING_DIR, species_name=SPECIES_NAME.replace(' ', '_'))
     output_dir = '{output_directory}/{species_abbr}'.format(output_directory=OUTPUT_DIR, species_abbr=species_abbreviation(SPECIES_NAME))
 
+    mpileup = gwf.map(
+        name=name_mpileup,
+        template_func=mpileup_parts,
+        inputs=partitions,
+        extra={'bam_files': SAMPLE_LIST,
+               'reference_genome': REFERENCE_GENOME,
+               'species_name': SPECIES_NAME,
+               'output_directory': top_dir}
+    )
+
+    sync = gwf.map(
+        name=name_sync,
+        template_func=mpileup2sync,
+        inputs=collect(mpileup.outputs, ['mpileup'])['mpileups']
+    )
+
+    concat_mpileup = gwf.target_from_template(
+        name='concat_mpileup',
+        template=concat(
+            files=collect(mpileup.outputs, ['mpileup'])['mpileups'],
+            output_name='{}'.format(species_abbreviation(SPECIES_NAME)),
+            output_directory=output_dir
+        )
+    )
+
+    concat_sync = gwf.target_from_template(
+        name='concat_sync',
+        template=concat(
+            files=collect(sync.outputs, ['sync'])['syncs'],
+            output_name='{}'.format(species_abbreviation(SPECIES_NAME)),
+            output_directory=output_dir
+        )
+    )
+
     coverage_threshold = gwf.map(
         name=name_cov,
         template_func=max_cov,
         inputs=contigs,
-        extra={'mpileup': MPILEUP,
+        extra={'mpileup': concat_mpileup.outputs['concat_file'],
                'cutoff': MAXCOV,
                'output_directory': top_dir}
     )
@@ -371,7 +409,7 @@ def poolsnp_workflow(config_file: str = glob.glob('*config.y*ml')[0]):
         template=poolsnp(
             mpileup=MPILEUP,
             max_cov=concat_coverage.outputs['concat_file'],
-            sample_list=SAMPLE_LIST,
+            sample_list=sample_names,
             reference_genome=REFERENCE_GENOME,
             working_directory=top_dir,
             species_name=SPECIES_NAME,

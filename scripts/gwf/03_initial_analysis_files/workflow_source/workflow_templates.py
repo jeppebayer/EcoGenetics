@@ -1,6 +1,8 @@
 from gwf import AnonymousTarget
 import os
 
+########################## GENERAL FUNCTIONS ##########################
+
 def species_abbreviation(species_name: str):
     """Creates species abbreviation from species name.
     
@@ -102,6 +104,8 @@ def partition_chrom_real(parse_fasta: list, size: int = 500000):
         chrom_partition.append({'num': num, 'region': chrom['sequence_name'], 'start': start, 'end': start + partial_chunk})
         num += 1
     return chrom_partition
+
+########################## FREEBAYES ##########################
 
 def name_vcf(idx, target):
     chr = os.path.splitext(os.path.basename(target.outputs['region']))[0].split('_', 1)[1]
@@ -888,8 +892,134 @@ def snpEff_ann(vcf_file: str, reference_genome_version: str, output_directory: s
 
 ########################## PoolSNP ##########################
 
+def name_mpileup(idx, target):
+    return 'mpileup_{idx}'.format(idx=idx+1)
+
+def name_sync(idx, target):
+    return 'sync_{idx}'.format(idx=idx+1)
+
 def name_cov(idx, target):
     return '{}'.format(os.path.basename(target.outputs['cutoff']))
+
+def mpileup_parts(bam_files: list, reference_genome: str, species_name: str, region: str, num: int, start: int, end: int, output_directory: str = '.'):
+    """
+    Template: Create :format:`mpileup` files for each partition of reference genome from multiple :format:`BAM` files using :script:`samtools mpileup`.
+    
+    Template I/O::
+    
+        inputs = {'bam_files': bam_files,
+                  'reference': reference_genome}
+        outputs = {'mpileup': *.mpileup}
+    
+    :param list bam_files:
+        List of all :format:`BAM` files to be included in :format:`mpileup` file.
+    :param str reference_genome:
+        Path to genome reference file in `FASTA`format.
+    :param str species_name:
+        Name of species being worked on.
+    :param str region:
+        Name of chromosome from **partition_chrom**.
+    :param int num:
+        Partition number from **partition_chrom**.
+    :param int start:
+        Start position from **partition_chrom**.
+    :param int end:
+        End position from **partition_chrom**.
+    :param str output_directory:
+        Path to desired output directory. Defaults to current directory. Always creates 'tmp' directory in output directory.
+    """
+    output_directory = '{}/tmp'.format(output_directory)
+    file_name = '{output_path}/{abbr}_{num}_{chrom}'.format(output_path=output_directory, abbr=species_abbreviation(species_name), num=num, chrom=region)
+    bam_string = ' '.join(bam_files)
+    inputs = {'bam_files': bam_files,
+              'reference': reference_genome}
+    outputs = {'mpileup': '{file_name}.mpileup'.format(file_name=file_name)}
+    options = {
+        'cores': 1,
+        'memory': '16g',
+        'walltime': '10:00:00'
+    }
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    sleep 2m
+
+    [ -d {output_directory} ] || mkdir -p {output_directory}
+
+    echo -e '{chromosome}\t{start}\t{end}' > {output_directory}/{num}.bed
+    
+    samtools mpileup \
+        --max-depth 0 \
+        --fasta-ref {reference} \
+        --positions {output_directory}/{num}.bed \
+        --min-BQ 0 \
+        --region {chromosome} \
+        --output {file_name}.prog.mpileup \
+        {bam_files}
+    
+    mv {file_name}.prog.mpileup {mpileup}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(output_directory=output_directory, chromosome=region, start=start, end=end, num=num, reference=reference_genome, file_name=file_name, bam_files=bam_string, mpileup=outputs['mpileup'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def mpileup2sync(mpileup_file: str, output_directory: str = None, mpileup2sync: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/popoolation2_v1.201/mpileup2sync.pl'):
+    """
+    Template: Makes a :format:`sync` file for a corresponding :format:`mpileup` file using :script:`popoolation2`'s :script:`mpileup2sync.pl`
+    
+    Template I/O::
+    
+        inputs = {'mpileup': mpileup_file}
+        outputs = {'sync': *.sync}
+    
+    :param str mpileup_file:
+        Input :format:`mpileup` file.
+    :param str output_directory:
+        Desired output directory for :format:`sync` file. Defaults to directory of mpileup_file.
+    :param str mpileup2sync:
+        Path to :script:`mpile2sync.pl`.
+    """
+    if output_directory is None:
+        output_directory = os.path.dirname(mpileup_file)
+    file_name = '{output_path}/{filename}'.format(output_path=output_directory, filename=os.path.splitext(os.path.basename(mpileup_file))[0])
+    inputs = {'mpileup': mpileup_file}
+    outputs = {'sync': '{}.sync'.format(file_name)}
+    options = {
+        'cores': 2,
+        'memory': '16g',
+        'walltime': '06:00:00'
+    }
+    spec = """
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate vcf
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory} ] || mkdir -p {output_directory}
+
+    perl {mpileup2sync} \
+        --input {mpileup} \
+        --output {file_name}.prog.sync \
+        --fastq-type sanger
+    
+    mv {file_name}.prog.sync {sync}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """.format(mpileup2sync=mpileup2sync, mpileup=mpileup_file, file_name=file_name, sync=outputs['sync'], output_directory=output_directory)
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/PoolSNP/scripts/max-cov.py'):
     """
@@ -908,7 +1038,7 @@ def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, scr
     options = {
         'cores': 1,
         'memory': '10g',
-        'walltime': '18:00:00'
+        'walltime': '30:00:00'
     }
     spec = """
     # Sources environment
@@ -932,7 +1062,11 @@ def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, scr
         --contig {contig} \
         --out {file_name}.prog.txt
     
-    mv {file_name}.prog.txt {cutoff_file}
+    if [ -f {file_name}.prog.txt ]; then
+        mv {file_name}.prog.txt {cutoff_file}
+    else
+        echo -n "" > {cutoff_file}
+    done
     
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
@@ -1017,12 +1151,14 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
     """
     if output_directory is None:
         output_directory = working_directory
-    inputs = {'mpileup': mpileup}
+    inputs = {'mpileup': mpileup,
+              'max_cov': max_cov}
     outputs = {'vcf': '{output_directory}/{species_abbr}.vcf.gz'.format(output_directory=output_directory, species_abbr=species_abbreviation(species_name))}
+    protect = outputs['vcf']
     options = {
         'cores': 20,
         'memory': '160g',
-        'walltime': '10:00:00'
+        'walltime': '60:00:00'
     }
     spec = """
     # Sources environment
@@ -1058,10 +1194,10 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
 
     parallel \
         -k \
-        -j  {cores} \
+        -j {cores} \
         --pipepart \
         --no-notice \
-        -a  {mpileup} \
+        -a {mpileup} \
     --cat python {script} \
         --mpileup  {{}} \
         --min-cov {min_cov} \
@@ -1083,4 +1219,4 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """.format(cores=options['cores'], mpileup=mpileup, script=script, working_directory=working_directory, output_directory=output_directory, min_cov=min_cov, max_cov=max_cov, min_count=min_count, min_freq=min_freq, miss_frac=miss_frac, bq=bq, reference=reference_genome, sites=sites, VCF=outputs['vcf'], samples='\t'.join(sample_list))
-    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)

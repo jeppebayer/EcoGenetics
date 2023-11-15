@@ -1,0 +1,32 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being worked on.
+species_name: Orchesella cincta
+# List of all sample names present in mpileup file
+sample_list:
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_JHJ-C222/OrcCin_JHJ-C222_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_NYS-F/OrcCin_NYS-F_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_NYS-F-C25/OrcCin_NYS-F-C25_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_RYJ/OrcCin_RYJ_filtered.bam
+# Path to reference genome.
+reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna
+# Path to mpileup file.
+mpileup_path: /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Entomobrya_nicoleti/EntNic/EntNic.mpileup
+# Directory for intermidiary files and various statistics.
+working_directory_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
+# Directory for output VCF.
+output_directory_path: /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta
+# Maximum coverage cutoff value. the maximum coverage percentile to be computed.
+max_cov: 0.98
+# Sample-wise minimum coverage:
+min_cov: 1
+# Minimum alternative allele count across all populations pooled.
+min_count: 2
+# Minimum alternative allele frequency across all populations pooled.
+min_freq: 0.000001
+# Maximum allowed fraction of samples not fullfilling all parameters.
+miss_frac: 1
+# Minimum base quality for every nucleotide.
+bq: 15
+# Include all sites (or only polymorphic sites). True | False
+all_sites: True
