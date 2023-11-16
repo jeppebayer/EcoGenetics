@@ -109,7 +109,7 @@ def hic_processing_workflow(config_file = glob.glob('*config.y*ml')[0]):
         name='{}_juicer_tools'.format(species_abbreviation(SPECIES_NAME)),
         template=juicer_hic_matrix(
             pairs_file=split.outputs['pairs'],
-            reference_genome=REFERENCE_GENOME,
+            chrom_sizes=chrom_size.outputs['chrom_sizes']
         )
     )
 

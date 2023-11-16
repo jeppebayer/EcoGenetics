@@ -468,10 +468,8 @@ def ligation_events(sam_file: str, chrom_sizes: str, species_name: str):
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
-    temp_dir="$(dirname {sam})"/temp
-    if [ ! -e "$temp_dir" ]; then
-        mkdir -m 775 "$temp_dir"
-    fi
+    tmp_dir="$(dirname {sam})"/tmp
+    [ -f "$tmp_dir" ] || mkdir -m 775 "$tmp_dir"
 
     pairtools parse \
         --assembly EG_{species_abbr} \
@@ -575,10 +573,8 @@ def split_pairsam(pairsam_file: str):
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
-    temp_dir="$(dirname {pairsam})"/temp
-    if [ ! -e "$temp_dir" ]; then
-        mkdir -m 775 "$temp_dir"
-    fi
+    tmp_dir="$(dirname {pairsam})"/tmp
+    [ -f "$tmp_dir" ] || mkdir -m 775 "$tmp_dir"
 
     pairtools split \
         --nproc-in {cores} \
@@ -660,7 +656,7 @@ def split_pairsam(pairsam_file: str):
 #     """.format(cores=options['cores'], pairsam=inputs['pairsam'], pairs=outputs['pairs'], file_name=file_name, bam=outputs['bam'], index=outputs['index'])
 #     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
-def juicer_hic_matrix(pairs_file: str, reference_genome: str, juicer_script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
+def juicer_hic_matrix(pairs_file: str, chrom_sizes: str, juicer_script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
     """
     Template: Create Hi-C contact matrix from a *.pairs* file using :script:`juicer_tools pre`.
     
@@ -679,7 +675,7 @@ def juicer_hic_matrix(pairs_file: str, reference_genome: str, juicer_script: str
         Path to *juicer_tools.jar*. By default should lead to *juicer_tools.jar* in workflow_source directory.
     """
     inputs = {'pairs': pairs_file,
-              'reference_genome': reference_genome}
+              'chrom_sizes': chrom_sizes}
     file_name = '{path}/{base_name}.init_contact_map'.format(path=os.path.dirname(inputs['pairs']), base_name=os.path.basename(inputs['pairs']).split(sep='.')[0])
     outputs = {'hic': '{}.hic'.format(file_name)}
     options = {
@@ -706,13 +702,13 @@ def juicer_hic_matrix(pairs_file: str, reference_genome: str, juicer_script: str
             --threads {cores} \
             {pairs} \
             {file_name}.prog.hic \
-            {reference_genome}
+            {chrom_sizes}
     
     mv {file_name}.prog.hic {hic_matrix}
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(mem=options['memory'], juicer_script=juicer_script, cores=options['cores'], pairs=inputs['pairs'], file_name=file_name, hic_matrix=outputs['hic'], reference_genome=inputs['reference_genome'])
+    """.format(mem=options['memory'], juicer_script=juicer_script, cores=options['cores'], pairs=inputs['pairs'], file_name=file_name, hic_matrix=outputs['hic'], chrom_sizes=inputs['chrom_sizes'])
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
 
