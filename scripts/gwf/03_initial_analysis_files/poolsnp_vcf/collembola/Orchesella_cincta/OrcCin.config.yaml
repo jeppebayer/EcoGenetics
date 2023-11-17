@@ -2,7 +2,7 @@
 account: EcoGenetics
 # Name of species being worked on.
 species_name: Orchesella cincta
-# List of all sample names present in mpileup file
+# List of paths to all BAM files.
 sample_list:
 - /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_JHJ-C222/OrcCin_JHJ-C222_filtered.bam
 - /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_NYS-F/OrcCin_NYS-F_filtered.bam
