@@ -1066,7 +1066,7 @@ def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, scr
         mv {file_name}.prog.txt {cutoff_file}
     else
         echo -n "" > {cutoff_file}
-    done
+    fi
     
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
@@ -1116,6 +1116,8 @@ def concat(files: list, output_name: str, output_directory: str = None, compress
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
+    [ -d {output_directory}] || mkdir -p {output_directory}
+
     if [ {compress} == 'False' ]; then
         cat \
             {sorted_files} \
@@ -1135,7 +1137,7 @@ def concat(files: list, output_name: str, output_directory: str = None, compress
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(compress=compress, sorted_files=' '.join(files), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'])
+    """.format(compress=compress, sorted_files=' '.join(files), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'], output_directory=output_directory)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)
 
 def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str, working_directory: str, species_name: str, output_directory: str = None, min_cov: int = 10, min_count: int = 3, min_freq: float = 0.01, miss_frac: float = 0.1, bq: int = 15, sites: int = 1, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/PoolSNP/scripts/PoolSnp.py'):

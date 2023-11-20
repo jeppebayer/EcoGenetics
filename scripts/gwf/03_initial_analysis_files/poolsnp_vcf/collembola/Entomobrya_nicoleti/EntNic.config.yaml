@@ -38,9 +38,9 @@ min_cov: 2
 # Minimum alternative allele count across all populations pooled.
 min_count: 2
 # Minimum alternative allele frequency across all populations pooled.
-min_freq: 0.000001
+min_freq: 0
 # Maximum allowed fraction of samples not fullfilling all parameters.
-miss_frac: 1
+miss_frac: 0.001
 # Minimum base quality for every nucleotide.
 bq: 15
 # Include all sites (or only polymorphic sites). True | False
