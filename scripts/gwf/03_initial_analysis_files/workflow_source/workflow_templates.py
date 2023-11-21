@@ -1175,24 +1175,24 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
     [ -d {working_directory}/tmp ] || mkdir -p {working_directory}/tmp
 
     headerfile={working_directory}/tmp/header.txt
-    echo -e '##fileformat=VCFv4.2' > "$headerfile"
-    echo -e '##fileDate=$(date +%d'/'%m'/'%y)' >> "$headerfile"
-    echo -e '##Source=PoolSnp-1.05' >> "$headerfile"
-    echo -e '##Parameters=<ID=MinCov,Number={min_cov},Type=Integer,Description=\"Minimum coverage per sample\">' >> "$headerfile"
-    echo -e '##Parameters=<ID=MaxCov,Number={max_cov},Type=Integer,Description=\"Maximum chromosome- and sample-specific maximum coverage; Either a precomputed file or the maximum percentile cutoff, eg. 0.95 to consider only reads within the 95% coverage percentile\">' >> "$headerfile"
-    echo -e '##Parameters=<ID=MinCount,Number={min_count},Type=Integer,Description=\"Minimum alternative allele count across all samples pooled\">' >> "$headerfile"
-    echo -e '##Parameters=<ID=MinFreq,Number={min_freq},Type=Float,Description=\"Minimum alternative allele frequency across all samples pooled\">' >> "$headerfile"
-    echo -e '##Parameters=<ID=MaximumMissingFraction,Number={miss_frac},Type=Float,Description=\"Maximum fraction of samples allowed that are not fullfilling all parameters\">' >> "$headerfile"
-    echo -e '##Parameters=<ID=BaseQual,Number={bq},Type=Integer,Description=\"Minimum PHRED scaled base quality\">' >> "$headerfile"
-    echo -e '##Reference={reference}' >> "$headerfile"
-    echo -e '##INFO=<ID=ADP,Number=1,Type=Integer,Description=\"Average per-sample depth of bases with Phred score >=$bq\">' >> "$headerfile"
-    echo -e '##INFO=<ID=NC,Number=1,Type=Integer,Description=\"Number of samples not called\">' >> "$headerfile"
-    echo -e '##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">' >> "$headerfile"
-    echo -e '##FORMAT=<ID=RD,Number=1,Type=Integer,Description=\"Reference Counts\">' >> "$headerfile"
-    echo -e '##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Alternative Counts\">' >> "$headerfile"
-    echo -e '##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">' >> "$headerfile"
-    echo -e '##FORMAT=<ID=FREQ,Number=1,Type=Float,Description=\"Variant allele frequency\">' >> "$headerfile"
-    echo -e '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{samples}' >> "$headerfile"
+    echo -e "##fileformat=VCFv4.2" > "$headerfile"
+    echo -e "##fileDate=$(date +%d'/'%m'/'%y)" >> "$headerfile"
+    echo -e "##Source=PoolSnp-1.05" >> "$headerfile"
+    echo -e "##Parameters=<ID=MinCov,Number={min_cov},Type=Integer,Description=\"Minimum coverage per sample\">" >> "$headerfile"
+    echo -e "##Parameters=<ID=MaxCov,Number={max_cov},Type=Integer,Description=\"Maximum chromosome- and sample-specific maximum coverage; Either a precomputed file or the maximum percentile cutoff, eg. 0.95 to consider only reads within the 95% coverage percentile\">" >> "$headerfile"
+    echo -e "##Parameters=<ID=MinCount,Number={min_count},Type=Integer,Description=\"Minimum alternative allele count across all samples pooled\">" >> "$headerfile"
+    echo -e "##Parameters=<ID=MinFreq,Number={min_freq},Type=Float,Description=\"Minimum alternative allele frequency across all samples pooled\">" >> "$headerfile"
+    echo -e "##Parameters=<ID=MaximumMissingFraction,Number={miss_frac},Type=Float,Description=\"Maximum fraction of samples allowed that are not fullfilling all parameters\">" >> "$headerfile"
+    echo -e "##Parameters=<ID=BaseQual,Number={bq},Type=Integer,Description=\"Minimum PHRED scaled base quality\">" >> "$headerfile"
+    echo -e "##Reference={reference}" >> "$headerfile"
+    echo -e "##INFO=<ID=ADP,Number=1,Type=Integer,Description=\"Average per-sample depth of bases with Phred score >={bq}\">" >> "$headerfile"
+    echo -e "##INFO=<ID=NC,Number=1,Type=Integer,Description=\"Number of samples not called\">" >> "$headerfile"
+    echo -e "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" >> "$headerfile"
+    echo -e "##FORMAT=<ID=RD,Number=1,Type=Integer,Description=\"Reference Counts\">" >> "$headerfile"
+    echo -e "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Alternative Counts\">" >> "$headerfile"
+    echo -e "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">" >> "$headerfile"
+    echo -e "##FORMAT=<ID=FREQ,Number=1,Type=Float,Description=\"Variant allele frequency\">" >> "$headerfile"
+    echo -e "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{samples}" >> "$headerfile"
 
     parallel \
         -k \
@@ -1201,12 +1201,12 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
         --no-notice \
         -a {mpileup} \
     --cat python {script} \
-        --mpileup  {{}} \
+        --mpileup {{}} \
         --min-cov {min_cov} \
-        --max-cov  {max_cov} \
-        --min-freq  {min_freq} \
-        --miss-frac  {miss_frac} \
-        --min-count  {min_count} \
+        --max-cov {max_cov} \
+        --min-freq {min_freq} \
+        --miss-frac {miss_frac} \
+        --min-count {min_count} \
         --base-quality  {bq} \
         --allsites {sites} \
         >  {working_directory}/tmp/SNPs.prog.txt
