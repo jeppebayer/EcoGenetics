@@ -1155,7 +1155,7 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
         output_directory = working_directory
     inputs = {'mpileup': mpileup,
               'max_cov': max_cov}
-    outputs = {'vcf': '{output_directory}/{species_abbr}.mincov2.vcf.gz'.format(output_directory=output_directory, species_abbr=species_abbreviation(species_name))}
+    outputs = {'vcf': '{output_directory}/{species_abbr}.vcf.gz'.format(output_directory=output_directory, species_abbr=species_abbreviation(species_name))}
     protect = outputs['vcf']
     options = {
         'cores': 20,

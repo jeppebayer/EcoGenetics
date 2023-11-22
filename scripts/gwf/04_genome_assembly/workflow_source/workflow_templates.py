@@ -853,18 +853,19 @@ def hifiadapterfilt(pacbio_hifi_reads: str, HiFiAdapterFilt_path: str = '/fastst
     :param str HiFiAdapterFilt_path:
         Path to :script:`HiFiAdapterFilt` directory.
     """
-    output_dir = '{}/HiFiAdapterFilt'.format(os.path.dirname(pacbio_hifi_reads))
+    output_directory = '{}/HiFiAdapterFilt'.format(os.path.dirname(pacbio_hifi_reads))
     inputs = {'pb_hifi': pacbio_hifi_reads}
     if inputs['pb_hifi'].endswith('.gz'):
         prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
         ext = '{}.gz'.format(os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[1])
     else:
-        prefix = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[0]
-        ext = os.path.splitext(os.path.splitext(os.path.basename(inputs['pb_hifi']))[0])[1]
-    outputs = {'filt': '{output_dir}/{prefix}.filt.fastq.gz'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-               'cont': '{output_dir}/{prefix}.contaminant.blastout'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-               'block': '{output_dir}/{prefix}.blocklist'.format(output_dir=output_dir, prefix=os.path.basename(prefix)),
-               'stats': '{output_dir}/{prefix}.stats'.format(output_dir=output_dir, prefix=os.path.basename(prefix))}
+        prefix = os.path.splitext(os.path.basename(inputs['pb_hifi']))[0]
+        ext = os.path.splitext(os.path.basename(inputs['pb_hifi']))[1]
+    outputs = {'filt': '{output_directory}/{prefix}.filt.fastq.gz'.format(output_directory=output_directory, prefix=os.path.basename(prefix)),
+               'cont': '{output_directory}/{prefix}.contaminant.blastout'.format(output_directory=output_directory, prefix=os.path.basename(prefix)),
+               'block': '{output_directory}/{prefix}.blocklist'.format(output_directory=output_directory, prefix=os.path.basename(prefix)),
+               'stats': '{output_directory}/{prefix}.stats'.format(output_directory=output_directory, prefix=os.path.basename(prefix))}
+    protect = [outputs['filt'], outputs['cont'], outputs['block'], outputs['stats']]
     options = {
         'cores': 10,
         'memory': '100g',
@@ -883,23 +884,25 @@ def hifiadapterfilt(pacbio_hifi_reads: str, HiFiAdapterFilt_path: str = '/fastst
     export PATH=$PATH:{hifiadapterfilt_dir}
     export PATH=$PATH:{hifiadapterfilt_dir}/DB
 
-    ln -s {pacbiohifi} "$(dirname({pacbiohifi}))"/prog.{ext}
+    [ -d {output_directory} ] || mkdir -p {output_directory}
+
+    ln -s {pacbiohifi} "$(dirname {pacbiohifi})"/prog.{ext}
 
     bash {hifiadapterfilt}/pbadapterfilt.sh \
         -t {cores} \
         -p prog \
-        -o {output_dir}
+        -o {output_directory}
         
-    mv {output_dir}/prog.filt.fastq.gz {filt}
-    mv {output_dir}/prog.contaminant.blastout {cont}
-    mv {output_dir}/prog.blocklist {block}
-    mv {output_dir}/prog.stats {stats}
-    rm "$(dirname({pacbiohifi}))"/prog.{ext}
+    mv {output_directory}/prog.filt.fastq.gz {filt}
+    mv {output_directory}/prog.contaminant.blastout {cont}
+    mv {output_directory}/prog.blocklist {block}
+    mv {output_directory}/prog.stats {stats}
+    rm "$(dirname {pacbiohifi})"/prog.{ext}
         
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
-    """.format(pacbiohifi=inputs['pbhifi'], hifiadapterfilt=HiFiAdapterFilt_path, ext=ext, cores=options['cores'], prefix=prefix, output_dir=output_dir, filt=outputs['filt'], cont=outputs['cont'], block=outputs['block'], stats=outputs['stats'])
-    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+    """.format(pacbiohifi=inputs['pbhifi'], hifiadapterfilt=HiFiAdapterFilt_path, ext=ext, cores=options['cores'], prefix=prefix, output_directory=output_directory, filt=outputs['filt'], cont=outputs['cont'], block=outputs['block'], stats=outputs['stats'])
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
 
 # Draft genome step 2 (variable)
 def kmer_analysis(genome_file: str, output_path: str, k: str =27, cannonical: bool = False, cutoff: int = 1000):
