@@ -4,7 +4,7 @@ import os, sys, gzip
 usage = "\nUsage: {} fa|fq [input file] [output file]\n".format(sys.argv[0])
 
 def load_data(x: str):
-    """Loads data either from standard input or from argument position 1 Input file can be gzipped.
+    """Loads data either from standard input or from argument position 1. Input file can be gzipped.
     
     :param any x:
         Input data or '-'."""
