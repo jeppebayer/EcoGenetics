@@ -1,7 +1,7 @@
 #!/bin/env python
 import os, sys, gzip
 
-usage = "\nUsage: {} [input file] [output file]\n".format(sys.argv[0])
+usage = f"\nUsage: {sys.argv[0]} [input file] [output file]\n"
 
 def load_data(x: str):
     """Loads data either from standard input or from argument position 1. Input file can be gzipped.
@@ -30,18 +30,18 @@ def n50(lengths: str | int):
         cumulative_sum += sequence_length
         n += 1
         if cumulative_sum >= (total_sequence_length // 2):
-            yield 'Total length\t{}\nn\t{}\nN50\t{}\nn\t{}'.format(total_sequence_length, len(sequence_lengths), sequence_length, n)
+            yield f'Total length\t{total_sequence_length}\nn\t{len(sequence_lengths)}\nN50\t{sequence_length}\nn\t{n}'
             break
 
 def continuously_write_output(input: str, output: str):
     """Continuously writes each iteration of input to output"""
     with output as outfile:
         for entry in input:
-            outfile.write("{}\n".format(entry))
+            outfile.write(f"{entry}\n")
             outfile.flush()
 
 if len(sys.argv) <= 1 or len(sys.argv) >= 4:
-    sys.stdout.write('{}\n'.format(usage))
+    sys.stdout.write(f'{usage}\n')
     exit(1)
 elif len(sys.argv) == 2:
     continuously_write_output(n50(load_data(sys.argv[1])), sys.stdout)
