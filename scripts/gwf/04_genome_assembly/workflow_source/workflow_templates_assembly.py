@@ -260,3 +260,39 @@ def hifiasm(hifi_sequence_file: str, output_directory_path: str, species_name: s
     """
     return AnonymousTarget(inputs=inputs, outputs=outputs,protect=protect, options=options, spec=spec)
 
+def busco():
+    """
+    Template: Runs BUSCO analysis on genome assembly.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {}
+    outputs = {}
+    options = {
+        'cores': 2,
+        'memory': '16g',
+        'walltime': '10:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    
+    
+    mv
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
