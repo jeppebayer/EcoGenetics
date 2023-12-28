@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/bin/env python3
 import os, sys, gzip
 
 usage = f"\nUsage: {sys.argv[0]} fa|fq [input file] [output file]\n"

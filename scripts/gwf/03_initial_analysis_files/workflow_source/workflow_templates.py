@@ -1052,17 +1052,21 @@ def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, scr
     
     [ -d {output_directory}/tmp/cov/cutoffs ] || mkdir -p {output_directory}/tmp/cov/cutoffs
 
-    awk \
-        -v contig={contig} \
-        '{{if ($1 == contig) {{print $0}}}}' \
-        {mpileup} \
-    | python {script} \
-        --mpileup - \
-        --cutoff {cutoff} \
-        --contig {contig} \
-        --out {file_name}.prog.txt
+    presence=$(awk -v contig={contig} 'BEGIN{{presence = no}} {{if ($1 == contig) {{presence = yes; exit}} }} END{{print presence}}' {mpileup})
     
-    if [ -f {file_name}.prog.txt ]; then
+    echo "$presence"
+
+    if [ "$presence" == "yes" ]; then
+        awk \
+            -v contig={contig} \
+            '{{if ($1 == contig) {{print $0}}}}' \
+            {mpileup} \
+        | python {script} \
+            --mpileup - \
+            --cutoff {cutoff} \
+            --contig {contig} \
+            --out {file_name}.prog.txt
+        
         mv {file_name}.prog.txt {cutoff_file}
     else
         echo -n "" > {cutoff_file}
@@ -1140,6 +1144,7 @@ def concat(files: list, output_name: str, output_directory: str = None, compress
     """.format(compress=compress, sorted_files=' '.join(files), file_name=file_name, ext=os.path.splitext(files[0])[1], concat_file=outputs['concat_file'], output_directory=output_directory)
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)
 
+# TODO Make script actually gzip output file and not just call it '.gz'
 def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str, working_directory: str, species_name: str, output_directory: str = None, min_cov: int = 10, min_count: int = 3, min_freq: float = 0.01, miss_frac: float = 0.1, bq: int = 15, sites: int = 1, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/03_initial_analysis_files/workflow_source/PoolSNP/scripts/PoolSnp.py'):
     """
     Template: Creates :format:`VCF` file using :script:`PoolSnp.py`.
@@ -1215,6 +1220,7 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
 
     cat {working_directory}/tmp/header.txt {working_directory}/tmp/SNPs.txt > {VCF}
 
+    rm -f {working_directory}/tmp/header.txt
     rm -f {working_directory}/tmp/SNPs.prog.txt
     rm -f {working_directory}/tmp/SNPs.txt
 

@@ -10,8 +10,6 @@ sample_list:
 - /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_RYJ/OrcCin_RYJ_filtered.bam
 # Path to reference genome.
 reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna
-# Path to mpileup file.
-mpileup_path: /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Entomobrya_nicoleti/EntNic/EntNic.mpileup
 # Directory for intermidiary files and various statistics.
 working_directory_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
 # Directory for output VCF.

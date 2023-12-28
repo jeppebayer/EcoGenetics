@@ -213,11 +213,12 @@ def hifiasm(hifi_sequence_file: str, output_directory_path: str, species_name: s
     :param
     """
     inputs = {'hifi': hifi_sequence_file}
-    outputs = {'primary': f'{output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.bp.p_ctg.gfa',
+    outputs = {'fasta': f'{output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.bp.p_ctg.fasta',
+               'primary': f'{output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.bp.p_ctg.gfa',
                'misc': [f'{output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.a_ctg.gfa',
                         f'{output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.r_utg.gfa',
                         f'{output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.p_ctg.gfa']}
-    protect = [outputs['primary']]
+    protect = [outputs['primary'], outputs['fasta']]
     options = {
         'cores': 32,
         'memory': '480g',
@@ -253,14 +254,16 @@ def hifiasm(hifi_sequence_file: str, output_directory_path: str, species_name: s
             {{print ">"$2"\n"$3}}}}' \
         {outputs['primary']} \
     | fold \
-    > {os.path.splitext(outputs['primary'])[0]}.fasta
+        > {output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.bp.p_ctg.prog.fasta
+
+    mv {output_directory_path}/hifiasm/{species_abbreviation(species_name)}.asm.bp.p_ctg.prog.fasta {outputs['fasta']}
 
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """
     return AnonymousTarget(inputs=inputs, outputs=outputs,protect=protect, options=options, spec=spec)
 
-def busco():
+def busco(assembly_file: str, output_directory_path: str, dataset: str = "/faststorage/project/EcoGenetics/BACKUP/database/busco/busco_downloads/lineages/arthropoda_odb10"):
     """
     Template: Runs BUSCO analysis on genome assembly.
     
@@ -271,8 +274,14 @@ def busco():
     
     :param
     """
-    inputs = {}
-    outputs = {}
+    inputs = {'assembly': assembly_file}
+    outputs = {'busco': [f'{output_directory_path}/busco_{os.path.splitext(os.path.basename(assembly_file))[0]}/run_{os.path.basename(dataset)}/full_table.tsv',
+                         f'{output_directory_path}/busco_{os.path.splitext(os.path.basename(assembly_file))[0]}/run_{os.path.basename(dataset)}/missing_busco_list.tsv',
+                         f'{output_directory_path}/busco_{os.path.splitext(os.path.basename(assembly_file))[0]}/run_{os.path.basename(dataset)}/short_summary.json',
+                         f'{output_directory_path}/busco_{os.path.splitext(os.path.basename(assembly_file))[0]}/run_{os.path.basename(dataset)}/short_summary.txt',
+                         f'{output_directory_path}/busco_{os.path.splitext(os.path.basename(assembly_file))[0]}/short_summary.specific.{os.path.basename(dataset)}.busco_{os.path.splitext(os.path.basename(assembly_file))[0]}.json',
+                         f'{output_directory_path}/busco_{os.path.splitext(os.path.basename(assembly_file))[0]}/short_summary.specific.{os.path.basename(dataset)}.busco_{os.path.splitext(os.path.basename(assembly_file))[0]}.json']}
+    protect = outputs['busco']
     options = {
         'cores': 2,
         'memory': '16g',
@@ -288,11 +297,657 @@ def busco():
     echo "START: $(date)"
     echo "JobID: $SLURM_JOBID"
     
+    busco \
+        -f \
+        -i {assembly_file} \
+        -m genome \
+        -o busco_{os.path.splitext(os.path.basename(assembly_file))[0]} \
+        --out_path {output_directory_path} \
+        -l {dataset}
     
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+# Draft genome step 4 (purge_dup'ing preliminary assembly)
+def minimap_raw(assembly_file: str, pacbio_hifi_reads: str, output_directory_path: str, species_name: str, round_number: int = 1):
+    """
+    Template: Aligns raw PacBio HiFi data to current assembly, producing a :format:`paf` file using minimap2.
     
-    mv
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'assembly': assembly_file,
+              'pacbio': pacbio_hifi_reads}
+    outputs = {'paf': f'{output_directory_path}/purge_dups/{round_number:02}/{species_abbreviation(species_name)}.paf.gz',
+               'stats': [f'{output_directory_path}/purge_dups/{round_number:02}/PB.stat',
+                         f'{output_directory_path}/purge_dups/{round_number:02}/PB.base.cov']}
+    options = {
+        'cores': 16,
+        'memory': '160g',
+        'walltime': '01:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/purge_dups/{round_number:02} ] || mkdir -p {output_directory_path}/purge_dups/{round_number:02}
+
+    minimap2 \
+        -x map-hifi \
+        -t {options['cores']} \
+        {assembly_file} \
+        {pacbio_hifi_reads} \
+    | gzip \
+        -c \
+        - \
+        > {output_directory_path}/purge_dups/{round_number:02}/{species_abbreviation(species_name)}.prog.paf.gz 
+    
+    pbcstat \
+        -O {output_directory_path}/purge_dups/{round_number:02}/ \
+        {output_directory_path}/purge_dups/{round_number:02}/{species_abbreviation(species_name)}.prog.paf.gz
+
+    mv {output_directory_path}/purge_dups/{round_number:02}/{species_abbreviation(species_name)}.prog.paf.gz {outputs['paf']}
     
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def split_assembly(assembly_file: str):
+    """
+    Template: Splits assembly in :format:`fasta` format into equal pieces.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'assembly': assembly_file}
+    outputs = {'split': f'{os.path.splitext(assembly_file)[0]}.split.{os.path.splitext(assembly_file)[1]}'}
+    options = {
+        'cores': 2,
+        'memory': '20',
+        'walltime': '01:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    split_fa \
+        {assembly_file} \
+        > {os.path.splitext(assembly_file)[0]}.split.prog.{os.path.splitext(assembly_file)[1]}
+    
+    mv {os.path.splitext(assembly_file)[0]}.split.prog.{os.path.splitext(assembly_file)[1]} {outputs['split']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def minimap_self(split_assembly_file: str, species_name: str):
+    """
+    Template: Aligns a split assembly to itself using :script:`minimap2`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'assembly': split_assembly_file}
+    outputs = {'paf': f'{os.path.dirname(split_assembly_file)}/{species_abbreviation(species_name)}.self.paf.gz'}
+    options = {
+        'cores': 16,
+        'memory': '160g',
+        'walltime': '01:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    minimap2 \
+        -x asm5 \
+        -t {options['cores']} \
+        -DP \
+        {split_assembly_file} \
+        {split_assembly_file} \
+    | gzip \
+        -c \
+        - \
+        > {os.path.dirname(split_assembly_file)}/{species_abbreviation(species_name)}.self.prog.paf.gz
+    
+    mv {os.path.dirname(split_assembly_file)}/{species_abbreviation(species_name)}.self.prog.paf.gz {outputs['paf']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+# Hi-C
+def index_reference_genome_loop(reference_genome: str):
+    """
+    Template: Index reference genomes in path with :script:`bwa index` and :script:`samtools faidx`.
+    
+    Template I/O::
+
+        inputs = {'path': reference_genome}
+        outputs = {'path': [reference_genome.amb,
+                            reference_genome.ann,
+                            reference_genome.pac,
+                            reference_genome.bwt,
+                            reference_genome.sa,
+                            reference_genome.fai]}
+    
+    :param str reference_genome:
+        Reference or draft genome in `FASTA`format
+    """
+    inputs = {'path': reference_genome}
+    outputs = {'path': [f'{reference_genome}.amb',
+                        f'{reference_genome}.ann',
+                        f'{reference_genome}.pac',
+                        f'{reference_genome}.bwt',
+                        f'{reference_genome}.sa',
+                        f'{reference_genome}.fai']}
+    protect = outputs['path']
+    options = {
+        'cores': 1,
+        'memory': '16g',
+        'walltime': '02:00:00'
+    }
+    spec = f"""
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+
+    bwa index \
+        -p {reference_genome} \
+        {reference_genome}
+    
+    samtools faidx \
+        -o {reference_genome}.fai.prog \
+        {reference_genome}
+    
+    mv {reference_genome}.fai.prog {reference_genome}.fai
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, protect=protect, spec=spec)
+
+def hic_align(hic_read1: str, hic_read2: str, draft_genome: str, indices: list, output_directory_path: str, species_name: str):
+    """
+    Template: Align Hi-C data to draft genome using :script:`bwa mem`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'read1': hic_read1,
+              'read2': hic_read2,
+              'draft': draft_genome,
+              'indices': indices}
+    outputs = {'bam': f'{output_directory_path}/HiC/alignment/{species_abbreviation(species_name)}.HiC_to_draft.bam'}
+    options = {
+        'cores': 36,
+        'memory': '288g',
+        'walltime': '12:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/HiC/alignment/tmp ] || mkdir -p {output_directory_path}/HiC/alignment/tmp
+
+    bwa mem \
+        -t {options['cores']} \
+        -R '@RG\\tID:{species_abbreviation(species_name)}.HiC\\tSM:HiC_to_draft' \
+        -S \
+        -P \
+        -5 \
+        -T 0 \
+        {draft_genome} \
+        {hic_read1} \
+        {hic_read2} \
+    | samtools sort \
+        -@ {options['cores']} \
+        -O BAM \
+        -T {output_directory_path}/HiC/alignment/tmp \
+        -o {output_directory_path}/HiC/alignment/{species_abbreviation(species_name)}.HiC_to_draft.prog.bam
+    
+    mv {output_directory_path}/HiC/alignment/{species_abbreviation(species_name)}.HiC_to_draft.prog.bam {outputs['bam']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
+def mark_duplicates(bam_file: str, output_directory_path: str):
+    """
+    Template: Mark duplicates in :format:`BAM` alignment file using PICARD MarkDuplicates.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'bam': bam_file}
+    outputs = {'markdup': f'{output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.bam',
+               'metrics': f'{output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.txt'}
+    protect = outputs['metrics']
+    options = {
+        'cores': 2,
+        'memory': '30g',
+        'walltime': '12:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/HiC/alignment/tmp ] || mkdir -p {output_directory_path}/HiC/alignment/tmp
+
+    picard MarkDuplicates \
+        --INPUT {bam_file} \
+        --OUTPUT {output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.prog.bam \
+        --METRICS {outputs['metrics']} \
+        --TMP_DIR {output_directory_path}/HiC/alignment/tmp
+    
+    mv {output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.prog.bam {outputs['markdup']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def hic_scaffolding(draft_genome: str, hic_to_draft_bam: str, output_directory_path: str, species_name: str):
+    """
+    Template: Genome scaffolding with Hi-C data using :script:`YaHS`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'draft': draft_genome,
+              'hic': hic_to_draft_bam}
+    outputs = {'final': [f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_final.agp',
+                         f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_final.fa']}
+    protect = outputs['final']
+    options = {
+        'cores': 30,
+        'memory': '400g',
+        'walltime': '24:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/HiC/YaHS ] || mkdir -p {output_directory_path}/HiC/YaHS
+
+    yahs \
+        -r 10000,20000,50000,100000,200000,500000,1000000,2000000,5000000,10000000,20000000,50000000,100000000,200000000,500000000 \
+        -o {output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)} \
+        {draft_genome} \
+        {hic_to_draft_bam}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def alignment_conversion_no_manual_curation(hic_bin: str, scaffolds_final_agp: str, draft_assembly_fai_index: str, output_directory_path: str, species_name: str):
+    """
+    Template: Convert Hi-C alignment file to format required by juicer_tools.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'bin': hic_bin,
+              'scaffolds': scaffolds_final_agp,
+              'index': draft_assembly_fai_index}
+    outputs = {'sorted': f'{output_directory_path}/HiC/YaHS/no_curation/{species_abbreviation(species_name)}.alignments_sorted.txt'}
+    protect = outputs['sorted']
+    options = {
+        'cores': 32,
+        'memory': '256g',
+        'walltime': '12:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/HiC/YaHS/tmp ] || mkdir -p {output_directory_path}/HiC/YaHS/tmp
+    [ -d {output_directory_path}/HiC/YaHS/no_curation ] || mkdir -p {output_directory_path}/HiC/YaHS/no_curation
+
+    juicer pre \
+        {hic_bin} \
+        {scaffolds_final_agp} \
+        {draft_assembly_fai_index} \
+    | sort \
+        -k2,2d \
+        -k6,6d \
+        -T {output_directory_path}/HiC/YaHS/tmp \
+        --parallel={options['cores']} \
+        -S {options['memory']} \
+    | awk \
+        'NF' \
+        > {output_directory_path}/HiC/YaHS/no_curation/{species_abbreviation(species_name)}.alignments_sorted.prog.txt
+
+    mv {output_directory_path}/HiC/YaHS/no_curation/{species_abbreviation(species_name)}.alignments_sorted.prog.txt {outputs['sorted']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def alignment_conversion_manual_curation(hic_bin: str, scaffolds_final_agp: str, draft_assembly_fai_index: str, output_directory_path: str, species_name: str):
+    """
+    Template: Convert Hi-C alignment file to format required by juicer_tools.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'bin': hic_bin,
+              'scaffolds': scaffolds_final_agp,
+              'index': draft_assembly_fai_index}
+    outputs = {'jbat': [f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.txt',
+                        f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.liftover.agp',
+                        f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.assembly',
+                        f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.assembly.agp',
+                        f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.log']}
+    protect = outputs['jbat']
+    options = {
+        'cores': 2,
+        'memory': '30g',
+        'walltime': '12:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/HiC/YaHS/tmp ] || mkdir -p {output_directory_path}/HiC/YaHS/tmp
+    [ -d {output_directory_path}/HiC/YaHS/curation ] || mkdir -p {output_directory_path}/HiC/YaHS/curation
+
+    juicer pre \
+        -a \
+        -o {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog \
+        {hic_bin} \
+        {scaffolds_final_agp} \
+        {draft_assembly_fai_index} \
+        > {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.log 2>&1
+    
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.txt {outputs['jbat'][0]}
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.liftover.agp {outputs['jbat'][1]}
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.assembly {outputs['jbat'][2]}
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.assembly.agp {outputs['jbat'][3]}
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.log {outputs['jbat'][4]}
+    
+    # Alternative way to get chromosome sizes
+    # grep \
+    #     "PRE_C_SIZE" \
+    #     {outputs['jbat'][4]} \
+    # | awk \
+    #     '{{print $2" "$3}}' \
+    #     > {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.chrom_sizes
+
+    # mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.chrom_sizes {outputs['sizes']}
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def chrom_sizes(scaffolds_final_fa: str, script: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/bin/get_length.py'):
+    """
+    Template: Create file containing two columns. In column 1 the name of each sequence, in column 2 the length of each sequence.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'scaffolds': scaffolds_final_fa}
+    outputs = {'sizes': f'{scaffolds_final_fa}.chrom_sizes'}
+    protect = outputs['sizes']
+    options = {
+        'cores': 2,
+        'memory': '16g',
+        'walltime': '06:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    {script} \
+        {scaffolds_final_fa} \
+        {scaffolds_final_fa}.prog.chrom_sizes
+    
+    mv {scaffolds_final_fa}.prog.chrom_sizes {outputs['sizes']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def contact_matrix_no_manual_curation(alignments_sorted: str, chrom_sizes: str, output_directory_path: str, species_name: str, juicer_tools: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
+    """
+    Template: Generate Hi-C contact matrix using :script:`juicer pre`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'sorted': alignments_sorted,
+              'sizes': chrom_sizes}
+    outputs = {'hic': f'{output_directory_path}/HiC/YaHS/no_curation/{species_abbreviation(species_name)}.hic'}
+    protect = outputs['hic']
+    options = {
+        'cores': 32,
+        'memory': '256g',
+        'walltime': '24:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/HiC/YaHS/tmp ] || mkdir -p {output_directory_path}/HiC/YaHS/tmp
+    [ -d {output_directory_path}/HiC/YaHS/no_curation ] || mkdir -p {output_directory_path}/HiC/YaHS/no_curation
+
+    java -Djava.awt.headless=true -jar -Xmx{options['memory']} {juicer_tools} pre \
+        -t {output_directory_path}/HiC/YaHS/tmp \
+        -j {options['cores']} \
+        {alignments_sorted} \
+        {output_directory_path}/HiC/YaHS/no_curation/{species_abbreviation(species_name)}.prog.hic \
+        {chrom_sizes}
+
+    mv {output_directory_path}/HiC/YaHS/no_curation/{species_abbreviation(species_name)}.prog.hic {outputs['hic']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def contact_matrix_manual_curation(JBAT_text: str, chrom_sizes: str, output_directory_path: str, species_name: str, juicer_tools: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
+    """
+    Template: Generate Hi-C contact matrix using :script:`juicer pre`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'jbat': JBAT_text,
+              'sizes': chrom_sizes}
+    outputs = {'hic': f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.hic'}
+    protect = outputs['hic']
+    options = {
+        'cores': 32,
+        'memory': '256g',
+        'walltime': '24:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    [ -d {output_directory_path}/HiC/YaHS/tmp ] || mkdir -p {output_directory_path}/HiC/YaHS/tmp
+    [ -d {output_directory_path}/HiC/YaHS/curation ] || mkdir -p {output_directory_path}/HiC/YaHS/curation
+
+    java -Djava.awt.headless=true -jar -Xmx{options['memory']} {juicer_tools} pre \
+        -t {output_directory_path}/HiC/YaHS/tmp \
+        -j {options['cores']} \
+        {JBAT_text} \
+        {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.hic \
+        {chrom_sizes}
+
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.hic {outputs['hic']}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def post_curation(reviewed_assembly: str, liftover_agp: str, draft_assembly: str, output_directory_path: str, species_name: str):
+    """
+    Template: Generate :format:`AGP` and :format:`FASTA` files for genome assembly after manual curation with :application:`JuiceBox`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'review': reviewed_assembly,
+              'liftover': liftover_agp,
+              'draft': draft_assembly}
+    outputs = {'final': [f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.FINAL.agp'
+                         f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.FINAL.fa']}
+    protect = outputs['final']
+    options = {
+        'cores': 2 ,
+        'memory': '30g',
+        'walltime': '12:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    juicer post \
+        -o {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog \
+        {reviewed_assembly} \
+        {liftover_agp} \
+        {draft_assembly}
+    
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.FINAL.agp {outputs['final'][0]}
+    mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.FINAL.fa {outputs['final'][1]}
+    
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
