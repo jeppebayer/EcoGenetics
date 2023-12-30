@@ -1107,7 +1107,7 @@ def concat(files: list, output_name: str, output_directory: str = None, compress
     options = {
         'cores': 2,
         'memory': '16g',
-        'walltime': '06:00:00'
+        'walltime': '12:00:00'
     }
     protect = outputs['concat_file']
     spec = """
@@ -1218,7 +1218,7 @@ def poolsnp(mpileup: str, max_cov: str, sample_list: list, reference_genome: str
 
     mv {working_directory}/tmp/SNPs.prog.txt {working_directory}/tmp/SNPs.txt
 
-    cat {working_directory}/tmp/header.txt {working_directory}/tmp/SNPs.txt > {VCF}
+    cat {working_directory}/tmp/header.txt {working_directory}/tmp/SNPs.txt | gzip > {VCF}
 
     rm -f {working_directory}/tmp/header.txt
     rm -f {working_directory}/tmp/SNPs.prog.txt

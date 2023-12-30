@@ -573,8 +573,8 @@ def mark_duplicates(bam_file: str, output_directory_path: str):
     :param
     """
     inputs = {'bam': bam_file}
-    outputs = {'markdup': f'{output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.bam',
-               'metrics': f'{output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.txt'}
+    outputs = {'markdup': f'{os.path.splitext(bam_file)[0]}.markdup.bam',
+               'metrics': f'{os.path.splitext(bam_file)[0]}.markdup.txt'}
     protect = outputs['metrics']
     options = {
         'cores': 2,
@@ -595,17 +595,21 @@ def mark_duplicates(bam_file: str, output_directory_path: str):
 
     picard MarkDuplicates \
         --INPUT {bam_file} \
-        --OUTPUT {output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.prog.bam \
-        --METRICS {outputs['metrics']} \
+        --OUTPUT {os.path.splitext(bam_file)[0]}.markdup.prog.bam \
+        --METRICS_FILE {outputs['metrics']} \
         --TMP_DIR {output_directory_path}/HiC/alignment/tmp
     
-    mv {output_directory_path}/HiC/alignment/{os.path.splitext(bam_file)[0]}.markdup.prog.bam {outputs['markdup']}
+    mv {os.path.splitext(bam_file)[0]}.markdup.prog.bam {outputs['markdup']}
     
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """
     return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
 
+# The input BAM could either sorted by read names (samtools sort with -n option) or not.
+# The behaviours of the program are slightly different, which might lead to slightly different scaffolding results.
+# For a BAM input sorted by read names, with each mapped read pair, a Hi-C link is counted between the middle positions of the read alignments; while for a BAM input sorted by coordinates or unsorted, Hi-C links are counted between the start positions of the read alignments.
+# Also, for a BAM input not sorted by read names, the mapping quality filtering is suppressed (-q option).
 def hic_scaffolding(draft_genome: str, hic_to_draft_bam: str, output_directory_path: str, species_name: str):
     """
     Template: Genome scaffolding with Hi-C data using :script:`YaHS`.
@@ -619,9 +623,10 @@ def hic_scaffolding(draft_genome: str, hic_to_draft_bam: str, output_directory_p
     """
     inputs = {'draft': draft_genome,
               'hic': hic_to_draft_bam}
-    outputs = {'final': [f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_final.agp',
-                         f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_final.fa']}
-    protect = outputs['final']
+    outputs = {'final': [f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_finals.agp',
+                         f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_finals.fa'],
+                'bin': f'{species_abbreviation(species_name)}.bin'}
+    protect = [outputs['final'][0], outputs['final'][1], outputs['bin']]
     options = {
         'cores': 30,
         'memory': '400g',
@@ -757,16 +762,6 @@ def alignment_conversion_manual_curation(hic_bin: str, scaffolds_final_agp: str,
     mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.assembly.agp {outputs['jbat'][3]}
     mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.log {outputs['jbat'][4]}
     
-    # Alternative way to get chromosome sizes
-    # grep \
-    #     "PRE_C_SIZE" \
-    #     {outputs['jbat'][4]} \
-    # | awk \
-    #     '{{print $2" "$3}}' \
-    #     > {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.chrom_sizes
-
-    # mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.chrom_sizes {outputs['sizes']}
-
     echo "END: $(date)"
     echo "$(jobinfo "$SLURM_JOBID")"
     """

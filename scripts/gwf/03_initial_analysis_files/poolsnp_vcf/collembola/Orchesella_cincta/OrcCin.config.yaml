@@ -4,9 +4,15 @@ account: EcoGenetics
 species_name: Orchesella cincta
 # List of paths to all BAM files.
 sample_list:
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_aeRoe-C182/OrcCin_aeRoe-C182_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_DSJ-C233/OrcCin_DSJ-C233_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_FaaJ-C6/OrcCin_FaaJ-C6_filtered.bam
 - /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_JHJ-C222/OrcCin_JHJ-C222_filtered.bam
-- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_NYS-F/OrcCin_NYS-F_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_KLJ-C49/OrcCin_KLJ-C49_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_LEJ-C63/OrcCin_LEJ-C63_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_MSJ-C87/OrcCin_MSJ-C87_filtered.bam
 - /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_NYS-F-C25/OrcCin_NYS-F-C25_filtered.bam
+- /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_NYS-F/OrcCin_NYS-F_filtered.bam
 - /faststorage/project/EcoGenetics/BACKUP/population_genetics/collembola/Orchesella_cincta/OrcCin_RYJ/OrcCin_RYJ_filtered.bam
 # Path to reference genome.
 reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Orchesella_cincta/GCA_001718145.1_ASM171814v1_genomic.fna
@@ -17,13 +23,13 @@ output_directory_path: /faststorage/project/EcoGenetics/BACKUP/population_geneti
 # Maximum coverage cutoff value. the maximum coverage percentile to be computed.
 max_cov: 0.98
 # Sample-wise minimum coverage:
-min_cov: 1
+min_cov: 2
 # Minimum alternative allele count across all populations pooled.
 min_count: 2
 # Minimum alternative allele frequency across all populations pooled.
-min_freq: 0.000001
+min_freq: 0
 # Maximum allowed fraction of samples not fullfilling all parameters.
-miss_frac: 1
+miss_frac: 0.001
 # Minimum base quality for every nucleotide.
 bq: 15
 # Include all sites (or only polymorphic sites). True | False
