@@ -1038,7 +1038,7 @@ def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, scr
     options = {
         'cores': 1,
         'memory': '10g',
-        'walltime': '30:00:00'
+        'walltime': '48:00:00'
     }
     spec = """
     # Sources environment
@@ -1052,9 +1052,7 @@ def max_cov(mpileup: str, contig: str, cutoff: float, output_directory: str, scr
     
     [ -d {output_directory}/tmp/cov/cutoffs ] || mkdir -p {output_directory}/tmp/cov/cutoffs
 
-    presence=$(awk -v contig={contig} 'BEGIN{{presence = no}} {{if ($1 == contig) {{presence = yes; exit}} }} END{{print presence}}' {mpileup})
-    
-    echo "$presence"
+    presence=$(awk -v contig={contig} 'BEGIN{{presence = "no"}} {{if ($1 == contig) {{presence = "yes"; exit}} }} END{{print presence}}' {mpileup})
 
     if [ "$presence" == "yes" ]; then
         awk \
@@ -1107,7 +1105,7 @@ def concat(files: list, output_name: str, output_directory: str = None, compress
     options = {
         'cores': 2,
         'memory': '16g',
-        'walltime': '12:00:00'
+        'walltime': '24:00:00'
     }
     protect = outputs['concat_file']
     spec = """

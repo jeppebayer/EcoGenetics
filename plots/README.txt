@@ -1,1 +1,0 @@
-This folder is to contain scripts for generating plot from result files and their corresponding plots.

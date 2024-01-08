@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# ------------------ Usage ------------------------------------------------
+
+usage(){
+cat << EOF
+
+Usage: $(basename "$0") [-n <PROJECT_NAME>] [-x] [-h]
+
+Setup directory structure for new project.
+
+OPTIONS:
+    -n  STRING          Desired name of project directory.
+                        Project name can contain path.
+                        Default: 'project'.
+    -x                  Expanded directory structure.
+    -h                  Show this message.
+
+EOF
+}
+
+# ------------------ Configuration ----------------------------------------
+
+# Default project directory name
+project_name=project
+# Default location of project directory
+directory_path="$PWD"
+
+directories=0
+expanded=0
+
+# ------------------ Functions --------------------------------------------
+
+make_directories(){
+    echo -en "Do you want to create the project directory '$(basename "$project_name")' in the directory path:\n'$directory_path'?"
+    read -p " (Y/n): " answer
+    if [[ "$answer" == @("yes"|"Yes"|"y"|"Y"|"") ]]; then
+        mkdir -m 764 "$directory_path"/"$project_name"
+        echo -e "Write a description of the project in this file.\nIf you want to initialize a git repository it is suggested you do it from this directory." > "$directory_path"/"$project_name"/README.txt
+        mkdir -m 774 "$directory_path"/"$project_name"/scripts
+        echo "This directory contains all scripts related to the project." > "$directory_path"/"$project_name"/scripts/README.txt
+        mkdir -m 764 "$directory_path"/"$project_name"/steps
+        echo "This directory contains all intermidiary data files produced by various steps of the project." > "$directory_path"/"$project_name"/steps/README.txt
+        mkdir -m 764 "$directory_path"/"$project_name"/results
+        echo "This directory contains all final results in the form graphs or 'smaller' data files." > "$directory_path"/"$project_name"/results/README.txt
+        echo -e "steps/\nlogs/" > "$directory_path"/"$project_name"/.gitignore
+        if [ "$1" == 1 ]; then
+            mkdir -m 764 "$directory_path"/"$project_name"/docs
+            echo "This directory contains documents related to the project." > "$directory_path"/"$project_name"/docs/README.txt
+            mkdir -m 764 "$directory_path"/"$project_name"/docs/images
+            echo "This direcotry contains any images used in relation to the written documents in /docs." > "$directory_path"/"$project_name"/docs/images/README.txt
+            mkdir -m 764 "$directory_path"/"$project_name"/test_data
+            echo "This directory contains data files used for testing." > "$directory_path"/"$project_name"/test_data/README.txt
+            echo -e "test_data/" >> "$directory_path"/"$project_name"/.gitignore
+        fi
+        echo "Project directory has been created."
+        exit 0
+    elif [[ "$answer" == @("no"|"No"|"n"|"N") ]]; then
+        echo "Cancelling..."
+        exit 0
+    else
+        echo "Unrecognized response"
+        make_directories "$1"
+    fi
+}
+
+# ------------------ Flag Processing --------------------------------------
+
+if [ -z "$1" ]; then
+    directories=1
+fi
+
+while getopts 'n:xh' OPTION; do
+    case "$OPTION" in 
+        n)
+            project_name="$OPTARG"
+            project_name="${project_name/" "/"_"}"
+            if [[ "$project_name" == */* ]]; then
+                directory_path=$(readlink -f "$(dirname "$project_name")")
+                if [ -d "$directory_path" ]; then
+                    directories=1
+                else
+                    echo -e "\n$directory_path does not seem to exist\n"
+                    exit 1
+                fi
+            else
+                directories=1
+            fi
+            ;;
+        x)
+            directories=1
+            expanded=1
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        ?)
+            echo -e "\nUnrecognized option"
+            usage
+            exit 2
+            ;;
+    esac
+done
+
+if [ -d "$directory_path/$project_name" ]; then
+    echo "Project directory already exists."
+    exit 3
+fi
+
+if [ "$directories" == 1 ]; then
+    make_directories "$expanded"
+fi
+
+echo -e "\n$(basename "$0") does not accept positional arguments."
+usage
+exit 4

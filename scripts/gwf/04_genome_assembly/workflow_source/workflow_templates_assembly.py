@@ -450,6 +450,66 @@ def minimap_self(split_assembly_file: str, species_name: str):
     """
     return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
 
+def purge_duplicates(PB_stat: str, PB_base_cov: str, self_alignment_paf: str, assembly_file: str, species_name: str):
+    """
+    Template: Purge haplotigs and overlaps using :script:`purge_dups`.
+    
+    Template I/O::
+    
+        inputs = {}
+        outputs = {}
+    
+    :param
+    """
+    inputs = {'stats': [PB_stat,
+                        PB_base_cov],
+                'paf': self_alignment_paf,
+                'assembly': assembly_file}
+    outputs = {'cutoffs': f'{os.path.dirname(PB_stat)}/cutoffs',
+               'dups': f'{os.path.dirname(self_alignment_paf)}/dups.bed',
+               'purged': f'{os.path.dirname(self_alignment_paf)}/{species_abbreviation(species_name)}.purged.fa'}
+    options = {
+        'cores': 2,
+        'memory': '20g',
+        'walltime': '02:00:00'
+    }
+    spec = f"""
+    # Sources environment
+    if [ "$USER" == "jepe" ]; then
+        source /home/"$USER"/.bashrc
+        source activate assembly
+    fi
+    
+    echo "START: $(date)"
+    echo "JobID: $SLURM_JOBID"
+    
+    calcuts \
+        {PB_stat} \
+        > {os.path.dirname(PB_stat)}/cutoffs.prog
+
+    mv {os.path.dirname(PB_stat)}/cutoffs.prog {outputs['cutoffs']}
+
+    purge_dups \
+        -2 \
+        -T {outputs['cutoffs']} \
+        -c {PB_base_cov} \
+        {self_alignment_paf} \
+        > {os.path.dirname(self_alignment_paf)}/dups.prog.bed
+    
+    mv {os.path.dirname(self_alignment_paf)}/dups.prog.bed {outputs['dups']}
+    
+    get_seqs \
+        -p {os.path.dirname(self_alignment_paf)}/{species_abbreviation(species_name)}.prog \
+        {outputs['dups']} \
+        {assembly_file}
+
+    mv {os.path.dirname(self_alignment_paf)}/{species_abbreviation(species_name)}.prog.purged.fa {outputs['purged']}
+
+    echo "END: $(date)"
+    echo "$(jobinfo "$SLURM_JOBID")"
+    """
+    return AnonymousTarget(inputs=inputs, outputs=outputs, options=options, spec=spec)
+
 # Hi-C
 def index_reference_genome_loop(reference_genome: str):
     """
@@ -524,7 +584,7 @@ def hic_align(hic_read1: str, hic_read2: str, draft_genome: str, indices: list, 
     options = {
         'cores': 36,
         'memory': '288g',
-        'walltime': '12:00:00'
+        'walltime': '24:00:00'
     }
     spec = f"""
     # Sources environment
@@ -578,8 +638,8 @@ def mark_duplicates(bam_file: str, output_directory_path: str):
     protect = outputs['metrics']
     options = {
         'cores': 2,
-        'memory': '30g',
-        'walltime': '12:00:00'
+        'memory': '100g',
+        'walltime': '24:00:00'
     }
     spec = f"""
     # Sources environment
@@ -592,6 +652,8 @@ def mark_duplicates(bam_file: str, output_directory_path: str):
     echo "JobID: $SLURM_JOBID"
     
     [ -d {output_directory_path}/HiC/alignment/tmp ] || mkdir -p {output_directory_path}/HiC/alignment/tmp
+
+    export _JAVA_OPTIONS="-Xmx100G"
 
     picard MarkDuplicates \
         --INPUT {bam_file} \
@@ -623,9 +685,9 @@ def hic_scaffolding(draft_genome: str, hic_to_draft_bam: str, output_directory_p
     """
     inputs = {'draft': draft_genome,
               'hic': hic_to_draft_bam}
-    outputs = {'final': [f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_finals.agp',
-                         f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffold_finals.fa'],
-                'bin': f'{species_abbreviation(species_name)}.bin'}
+    outputs = {'final': [f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffolds_final.agp',
+                         f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}_scaffolds_final.fa'],
+                'bin': f'{output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)}.bin'}
     protect = [outputs['final'][0], outputs['final'][1], outputs['bin']]
     options = {
         'cores': 30,
@@ -645,7 +707,7 @@ def hic_scaffolding(draft_genome: str, hic_to_draft_bam: str, output_directory_p
     [ -d {output_directory_path}/HiC/YaHS ] || mkdir -p {output_directory_path}/HiC/YaHS
 
     yahs \
-        -r 10000,20000,50000,100000,200000,500000,1000000,2000000,5000000,10000000,20000000,50000000,100000000,200000000,500000000 \
+        -r 1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000,2000000,5000000,10000000,20000000,50000000,100000000,200000000,500000000 \
         -o {output_directory_path}/HiC/YaHS/{species_abbreviation(species_name)} \
         {draft_genome} \
         {hic_to_draft_bam}
@@ -825,7 +887,7 @@ def contact_matrix_no_manual_curation(alignments_sorted: str, chrom_sizes: str, 
     options = {
         'cores': 32,
         'memory': '256g',
-        'walltime': '24:00:00'
+        'walltime': '48:00:00'
     }
     spec = f"""
     # Sources environment
@@ -854,7 +916,54 @@ def contact_matrix_no_manual_curation(alignments_sorted: str, chrom_sizes: str, 
     """
     return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
 
-def contact_matrix_manual_curation(JBAT_text: str, chrom_sizes: str, output_directory_path: str, species_name: str, juicer_tools: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
+# def contact_matrix_manual_curation(JBAT_text: str, chrom_sizes: str, output_directory_path: str, species_name: str, juicer_tools: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
+#     """
+#     Template: Generate Hi-C contact matrix using :script:`juicer pre`.
+    
+#     Template I/O::
+    
+#         inputs = {}
+#         outputs = {}
+    
+#     :param
+#     """
+#     inputs = {'jbat': JBAT_text,
+#               'sizes': chrom_sizes}
+#     outputs = {'hic': f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.hic'}
+#     protect = outputs['hic']
+#     options = {
+#         'cores': 32,
+#         'memory': '256g',
+#         'walltime': '48:00:00'
+#     }
+#     spec = f"""
+#     # Sources environment
+#     if [ "$USER" == "jepe" ]; then
+#         source /home/"$USER"/.bashrc
+#         source activate assembly
+#     fi
+    
+#     echo "START: $(date)"
+#     echo "JobID: $SLURM_JOBID"
+    
+#     [ -d {output_directory_path}/HiC/YaHS/tmp ] || mkdir -p {output_directory_path}/HiC/YaHS/tmp
+#     [ -d {output_directory_path}/HiC/YaHS/curation ] || mkdir -p {output_directory_path}/HiC/YaHS/curation
+
+#     java -Djava.awt.headless=true -jar -Xmx{options['memory']} {juicer_tools} pre \
+#         -t {output_directory_path}/HiC/YaHS/tmp \
+#         -j {options['cores']} \
+#         {JBAT_text} \
+#         {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.hic \
+#         {chrom_sizes}
+
+#     mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.hic {outputs['hic']}
+    
+#     echo "END: $(date)"
+#     echo "$(jobinfo "$SLURM_JOBID")"
+#     """
+#     return AnonymousTarget(inputs=inputs, outputs=outputs, protect=protect, options=options, spec=spec)
+
+def contact_matrix_manual_curation(JBAT_text: str, JBAT_log: str, output_directory_path: str, species_name: str, juicer_tools: str = '/faststorage/project/EcoGenetics/people/Jeppe_Bayer/scripts/gwf/04_genome_assembly/workflow_source/juicer_tools.2.20.00.jar'):
     """
     Template: Generate Hi-C contact matrix using :script:`juicer pre`.
     
@@ -866,13 +975,13 @@ def contact_matrix_manual_curation(JBAT_text: str, chrom_sizes: str, output_dire
     :param
     """
     inputs = {'jbat': JBAT_text,
-              'sizes': chrom_sizes}
+              'sizes': JBAT_log}
     outputs = {'hic': f'{output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.hic'}
     protect = outputs['hic']
     options = {
         'cores': 32,
         'memory': '256g',
-        'walltime': '24:00:00'
+        'walltime': '48:00:00'
     }
     spec = f"""
     # Sources environment
@@ -887,12 +996,12 @@ def contact_matrix_manual_curation(JBAT_text: str, chrom_sizes: str, output_dire
     [ -d {output_directory_path}/HiC/YaHS/tmp ] || mkdir -p {output_directory_path}/HiC/YaHS/tmp
     [ -d {output_directory_path}/HiC/YaHS/curation ] || mkdir -p {output_directory_path}/HiC/YaHS/curation
 
-    java -Djava.awt.headless=true -jar -Xmx{options['memory']} {juicer_tools} pre \
+    java -jar -Xmx{options['memory']} {juicer_tools} pre \
         -t {output_directory_path}/HiC/YaHS/tmp \
         -j {options['cores']} \
         {JBAT_text} \
         {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.hic \
-        {chrom_sizes}
+        <(cat {JBAT_log}  | grep PRE_C_SIZE | awk '{{print $2" "$3}}')
 
     mv {output_directory_path}/HiC/YaHS/curation/{species_abbreviation(species_name)}.JBAT.prog.hic {outputs['hic']}
     

@@ -102,11 +102,21 @@ def genome_assembly_workflow(config_file = glob.glob('*config.y*ml')[0]):
         )
     )
 
+    # matrix_curation = gwf.target_from_template(
+    #     name=f'{species_abbreviation(SPECIES_NAME)}_matrix_cu',
+    #     template=contact_matrix_manual_curation(
+    #         JBAT_text=curation_conversion.outputs['jbat'][0],
+    #         chrom_sizes=chromosome_sizes.outputs['sizes'],
+    #         output_directory_path=top_dir,
+    #         species_name=SPECIES_NAME
+    #     )
+    # )
+
     matrix_curation = gwf.target_from_template(
         name=f'{species_abbreviation(SPECIES_NAME)}_matrix_cu',
         template=contact_matrix_manual_curation(
             JBAT_text=curation_conversion.outputs['jbat'][0],
-            chrom_sizes=chromosome_sizes.outputs['sizes'],
+            JBAT_log=curation_conversion.outputs['jbat'][4],
             output_directory_path=top_dir,
             species_name=SPECIES_NAME
         )

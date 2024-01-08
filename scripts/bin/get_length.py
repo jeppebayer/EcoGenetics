@@ -1,7 +1,7 @@
 #!/bin/env python3
 import os, sys, gzip
 
-usage = f"\nUsage: {sys.argv[0]} fa|fq [input file] [output file]\n"
+usage = f"\nUsage: {sys.argv[0]} [input file] [output file]\n"
 
 def load_data(x: str):
     """Loads data either from standard input or from argument position 1. Input file can be gzipped.
@@ -54,24 +54,16 @@ def continuously_write_output(input: str, output: str):
             outfile.write(f"{entry}\n")
             outfile.flush()
 
-if len(sys.argv) <= 2 or len(sys.argv) >= 5:
+if len(sys.argv) != 3:
     sys.stdout.write('{}\n'.format(usage))
     exit(1)
-elif len(sys.argv) == 3:
-    if sys.argv[1].endswith('.fa') or sys.argv[1].endswith('.fasta'):
-        filteype = 'fa'
-    elif sys.argv[1].endswith('.fq') or sys.argv[1].endswith('.fastq'):
-        filetype = 'fq'
-    if not filetype:
-        filetype = sys.argv[2]
-    continuously_write_output(seq_length(load_data(sys.argv[1]), sys.argv[2]), sys.stdout)
 else:
-    if os.path.exists(sys.argv[3]):
-        os.remove(sys.argv[3])
+    if os.path.exists(sys.argv[2]):
+        os.remove(sys.argv[2])
     if sys.argv[1].endswith('.fa') or sys.argv[1].endswith('.fasta'):
-        filteype = 'fa'
+        filetype = 'fa'
     elif sys.argv[1].endswith('.fq') or sys.argv[1].endswith('.fastq'):
         filetype = 'fq'
-    if not filetype:
-        filetype = sys.argv[2]
-    continuously_write_output(seq_length(load_data(sys.argv[1]), sys.argv[2]), open(sys.argv[3], 'w'))
+    else:
+        filetype = 'na'
+    continuously_write_output(seq_length(load_data(sys.argv[1]), filetype), open(sys.argv[2], 'w'))
