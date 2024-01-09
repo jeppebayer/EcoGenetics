@@ -1,0 +1,9 @@
+Genome Annotations
+
+RepeatModeler2 5was initially applied to construct repeat databases that are specific to each species. Following this, we employed RepeatMasker 6 to soft mask the genome assembly for each species, by integrating each species-specific repeat database and the Repbase Arthropoda repeat database 7 to form the repeats library.
+
+We used STAR8 to do spliced alignments for the RNA sequence from every individual sample. The aligned RNA bam files from all the individual samples for a species were then combined using Samtools. This collective data served as transcriptome hints for predicting genes.
+
+We expedited the annotation process by running the BRAKER2 9ETP mode pipeline independently on each repeat-masked chromosome for each species in parallel. This process involved the use of the aligned species RNA bam file and the NCBI S.dumicola protein sequence as the transcriptome evidence and protein homology evidence respectively. The annotations derived from each chromosome were then assembled and merged into a single annotation file in the gff3 format for each species. Lastly, we used BUSCO 10to gauge the completeness of the genome annotations, employing the Arthropoda ortholog database for this purpose.
+
+The above annotation pipeline was completed for the majority of the chromosomes in all species, with two exceptions where the BRAKER2 pipeline using ETP mode fails to annotate the local part of the genome. The HiC_scaffold_11 of S.dumicola is annotated with the BRAKER2 with only RNA transcriptome data as the evidence. For the ending half of HiC_scaffold_16 of S.mimosarum, we used blat to search for S.bicolor mRNA sequence against the part of the genome sequence missing annotations. The hits of the blat search were further parsed as the hints for AUGUSTUS gene prediction. The results from AUGUSTUS gene prediction were combined with other results from BRAKER2 ETP mode.

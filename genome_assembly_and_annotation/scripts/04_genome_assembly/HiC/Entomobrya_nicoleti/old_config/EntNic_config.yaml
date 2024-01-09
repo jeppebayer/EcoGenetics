@@ -1,0 +1,10 @@
+# The name of the relevent project account.
+account: EcoGenetics
+# Name of species being analysed.
+species_name: Entomobrya nicoleti
+# Path to directory containing individual subdirectories for samples.
+HiC_directory_path: /faststorage/project/EcoGenetics/BACKUP/HiC/EntNic
+# Path to reference genome.
+reference_genome_path: /faststorage/project/EcoGenetics/BACKUP/reference_genomes/Entomobrya_nicoleti/EG_EntNic_16022023_genomic_nomask_noann.fna
+# Directory for intermidiary files and various statistics.
+working_directory_path: /faststorage/project/EcoGenetics/people/Jeppe_Bayer/steps
